@@ -51,7 +51,7 @@ describe('Rate Limit Wait Integration Tests', () => {
     it('should detect when 5-hour limit is reached', async () => {
       // Simulate rate limit API response
       vi.mocked(getUsage).mockResolvedValue({
-        data: {
+        rateLimits: {
           fiveHourPercent: 100,
           weeklyPercent: 75,
           fiveHourResetsAt: new Date(Date.now() + 3600000),
@@ -73,7 +73,7 @@ describe('Rate Limit Wait Integration Tests', () => {
 
     it('should detect when weekly limit is reached', async () => {
       vi.mocked(getUsage).mockResolvedValue({
-        data: {
+        rateLimits: {
           fiveHourPercent: 50,
           weeklyPercent: 100,
           fiveHourResetsAt: null,
@@ -94,7 +94,7 @@ describe('Rate Limit Wait Integration Tests', () => {
     it('should handle transition from limited to not limited', async () => {
       // First call: limited
       vi.mocked(getUsage).mockResolvedValueOnce({
-        data: {
+        rateLimits: {
           fiveHourPercent: 100,
           weeklyPercent: 50,
           fiveHourResetsAt: new Date(Date.now() + 1000),
@@ -109,7 +109,7 @@ describe('Rate Limit Wait Integration Tests', () => {
 
       // Second call: no longer limited
       vi.mocked(getUsage).mockResolvedValueOnce({
-        data: {
+        rateLimits: {
           fiveHourPercent: 0,
           weeklyPercent: 50,
           fiveHourResetsAt: null,
@@ -324,7 +324,7 @@ Assistant: I can help with more tasks.
 
   describe('Scenario: Error handling and edge cases', () => {
     it('should handle OAuth credentials not available', async () => {
-      vi.mocked(getUsage).mockResolvedValue({ data: null, error: 'no_credentials' });
+      vi.mocked(getUsage).mockResolvedValue({ rateLimits: null, error: 'no_credentials' });
 
       const status = await checkRateLimitStatus();
 

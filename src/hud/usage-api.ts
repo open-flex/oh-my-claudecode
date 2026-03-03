@@ -578,8 +578,8 @@ export function parseZaiResponse(response: ZaiQuotaResponse): RateLimits | null 
  * Get usage data (with caching)
  *
  * Returns a UsageResult with:
- * - data: RateLimits on success, null on failure
- * - error: categorized reason when data is null
+ * - rateLimits: RateLimits on success, null on failure/no credentials
+ * - error: categorized reason when API call fails (undefined on success or no credentials)
  *   - 'network': API call failed (timeout, HTTP error, parse error)
  *   - 'auth': credentials expired and refresh failed
  *   - 'no_credentials': no OAuth credentials available (expected for API key users)
@@ -593,7 +593,7 @@ export async function getUsage(): Promise<UsageResult> {
   // Check cache first (source must match to avoid cross-provider stale data)
   const cache = readCache();
   if (cache && isCacheValid(cache) && cache.source === currentSource) {
-    return { data: cache.data, error: cache.error && !cache.data ? 'network' : undefined };
+    return { rateLimits: cache.data, error: cache.error && !cache.data ? 'network' : undefined };
   }
 
   // z.ai path (must precede OAuth check to avoid stale Anthropic credentials)
@@ -601,12 +601,12 @@ export async function getUsage(): Promise<UsageResult> {
     const response = await fetchUsageFromZai();
     if (!response) {
       writeCache(null, true, 'zai');
-      return { data: null, error: 'network' };
+      return { rateLimits: null, error: 'network' };
     }
 
     const usage = parseZaiResponse(response);
     writeCache(usage, !usage, 'zai');
-    return { data: usage, error: usage ? undefined : 'network' };
+    return { rateLimits: usage };
   }
 
   // Anthropic OAuth path (official Claude Code support)
@@ -624,12 +624,12 @@ export async function getUsage(): Promise<UsageResult> {
         } else {
           // Refresh failed - auth error
           writeCache(null, true, 'anthropic');
-          return { data: null, error: 'auth' };
+          return { rateLimits: null, error: 'auth' };
         }
       } else {
         // No refresh token available - auth error
         writeCache(null, true, 'anthropic');
-        return { data: null, error: 'auth' };
+        return { rateLimits: null, error: 'auth' };
       }
     }
 
@@ -638,16 +638,16 @@ export async function getUsage(): Promise<UsageResult> {
       const response = await fetchUsageFromApi(creds.accessToken);
       if (!response) {
         writeCache(null, true, 'anthropic');
-        return { data: null, error: 'network' };
+        return { rateLimits: null, error: 'network' };
       }
 
       const usage = parseUsageResponse(response);
       writeCache(usage, !usage, 'anthropic');
-      return { data: usage, error: usage ? undefined : 'network' };
+      return { rateLimits: usage };
     }
   }
 
   // No credentials available (expected for API key users)
   writeCache(null, true, 'anthropic');
-  return { data: null, error: 'no_credentials' };
+  return { rateLimits: null, error: 'no_credentials' };
 }

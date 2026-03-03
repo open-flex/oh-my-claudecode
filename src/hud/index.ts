@@ -140,10 +140,8 @@ async function main(watchMode = false): Promise<void> {
     }
 
     // Fetch rate limits from OAuth API (if available)
-    const usageResult =
+    const rateLimitsResult =
       config.elements.rateLimits !== false ? await getUsage() : null;
-    const rateLimits = usageResult?.data ?? null;
-    const rateLimitsError = usageResult?.error;
 
     // Fetch custom rate limit buckets (if configured)
     const customBuckets =
@@ -185,8 +183,7 @@ async function main(watchMode = false): Promise<void> {
       backgroundTasks: getRunningTasks(hudState),
       cwd,
       lastSkill: transcriptData.lastActivatedSkill || null,
-      rateLimits,
-      rateLimitsError,
+      rateLimitsResult,
       customBuckets,
       pendingPermission: transcriptData.pendingPermission || null,
       thinkingState: transcriptData.thinkingState || null,

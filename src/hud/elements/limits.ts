@@ -5,7 +5,7 @@
  * and custom rate limit buckets from the rateLimitsProvider command.
  */
 
-import type { RateLimits, CustomProviderResult, CustomBucketUsage, UsageErrorReason } from '../types.js';
+import type { RateLimits, CustomProviderResult, CustomBucketUsage, UsageResult } from '../types.js';
 import { RESET } from '../colors.js';
 
 const GREEN = '\x1b[32m';
@@ -193,9 +193,10 @@ export function renderRateLimitsWithBar(
  * - 'auth': credentials expired, refresh failed → [API auth]
  * - 'no_credentials': no OAuth credentials (expected for API key users) → null (no display)
  */
-export function renderRateLimitsError(error: UsageErrorReason): string | null {
-  if (error === 'no_credentials') return null;
-  if (error === 'auth') return `${YELLOW}[API auth]${RESET}`;
+export function renderRateLimitsError(result: UsageResult | null): string | null {
+  if (!result?.error) return null;
+  if (result.error === 'no_credentials') return null;
+  if (result.error === 'auth') return `${YELLOW}[API auth]${RESET}`;
   return `${YELLOW}[API err]${RESET}`;
 }
 
@@ -268,3 +269,4 @@ export function renderCustomBuckets(
 
   return parts.join(' ');
 }
+

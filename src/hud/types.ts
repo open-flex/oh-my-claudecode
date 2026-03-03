@@ -180,16 +180,16 @@ export interface RateLimits {
  * - 'auth': Authentication failure (token expired, refresh failed)
  * - 'no_credentials': No OAuth credentials available (expected for API key users)
  */
-export type UsageErrorReason = 'network' | 'auth' | 'no_credentials';
+export type UsageErrorReason = 'network' | 'timeout' | 'http' | 'auth' | 'no_credentials';
 
 /**
  * Result of fetching usage data from the API.
- * Wraps RateLimits with error information so the HUD can distinguish
- * between "no data available" and "API call failed".
+ * - rateLimits: The rate limit data (null if no data available)
+ * - error: Set when the API call fails (undefined on success or no credentials)
  */
 export interface UsageResult {
-  data: RateLimits | null;
-  /** Error reason when API call fails (undefined on success) */
+  rateLimits: RateLimits | null;
+  /** Error reason when API call fails (undefined on success or no credentials) */
   error?: UsageErrorReason;
 }
 
@@ -296,8 +296,8 @@ export interface HudRenderContext {
   /** Last activated skill from transcript */
   lastSkill: SkillInvocation | null;
 
-  /** Rate limits (5h and weekly) from built-in Anthropic/z.ai providers */
-  rateLimits: RateLimits | null;
+  /** Rate limits result from built-in Anthropic/z.ai providers (includes error state) */
+  rateLimitsResult: UsageResult | null;
 
   /** Error reason when built-in rate limit API call fails (undefined on success or no credentials) */
   rateLimitsError?: UsageErrorReason;
