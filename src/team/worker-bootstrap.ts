@@ -31,11 +31,11 @@ export function generateWorkerOverlay(params: WorkerBootstrapParams): string {
   const sentinelPath = `.omc/state/team/${teamName}/workers/${workerName}/.ready`;
   const heartbeatPath = `.omc/state/team/${teamName}/workers/${workerName}/heartbeat.json`;
   const inboxPath = `.omc/state/team/${teamName}/workers/${workerName}/inbox.md`;
+  const statusPath = `.omc/state/team/${teamName}/workers/${workerName}/status.json`;
   const taskDir = `.omc/state/team/${teamName}/tasks`;
-  const donePath = `.omc/state/team/${teamName}/workers/${workerName}/done.json`;
 
   const taskList = sanitizedTasks.length > 0
-    ? sanitizedTasks.map(t => `- **Task ${t.id}**: ${t.subject}`).join('\n')
+    ? sanitizedTasks.map(t => `- **Task ${t.id}**: ${t.subject}\n  Description: ${t.description}\n  Status: pending`).join('\n')
     : '- No tasks assigned yet. Check your inbox for assignments.';
 
   return `# Team Worker Protocol
@@ -55,34 +55,55 @@ mkdir -p $(dirname ${sentinelPath}) && touch ${sentinelPath}
 ## Your Tasks
 ${taskList}
 
-## Task Claiming Protocol
-To claim a task, update the task file atomically:
-1. Read task from: ${taskDir}/{taskId}.json
-2. Update status to "in_progress", set owner to "${workerName}"
-3. Write back to task file
-4. Do the work
-5. Update status to "completed", write result to task file
+## Task Lifecycle Protocol (CLI API)
+Use the CLI API for all task lifecycle operations. Do NOT directly edit task files.
+
+1. Read your task file at \`${taskDir}/{taskId}.json\`
+2. Task id format: State/CLI APIs use task_id: "<id>" (example: "1"), not "task-1"
+3. Claim a task via CLI interop:
+   \`omc team api claim-task --input "{\\"team_name\\":\\"${teamName}\\",\\"task_id\\":\\"<id>\\",\\"worker\\":\\"${workerName}\\"}" --json\`
+4. Do the work described in the task
+5. On completion, transition via CLI interop (use the claim_token from step 3):
+   \`omc team api transition-task-status --input "{\\"team_name\\":\\"${teamName}\\",\\"task_id\\":\\"<id>\\",\\"from\\":\\"in_progress\\",\\"to\\":\\"completed\\",\\"claim_token\\":\\"<claim_token from step 3>\\"}" --json\`
+6. On failure, transition to "failed" with error (use the claim_token from step 3):
+   \`omc team api transition-task-status --input "{\\"team_name\\":\\"${teamName}\\",\\"task_id\\":\\"<id>\\",\\"from\\":\\"in_progress\\",\\"to\\":\\"failed\\",\\"claim_token\\":\\"<claim_token from step 3>\\"}" --json\`
+7. Use \`omc team api release-task-claim --json\` only for rollback to pending
 
 ## Communication Protocol
 - **Inbox**: Read ${inboxPath} for new instructions
+- **Status**: Write to ${statusPath}:
+  \`\`\`json
+  {"state": "idle", "updated_at": "<ISO timestamp>"}
+  \`\`\`
+  States: "idle" | "working" | "blocked" | "done" | "failed"
 - **Heartbeat**: Update ${heartbeatPath} every few minutes:
   \`\`\`json
-  {"workerName":"${workerName}","status":"working","updatedAt":"<ISO timestamp>","currentTaskId":"<id or null>"}
+  {"pid":<pid>,"last_turn_at":"<ISO timestamp>","turn_count":<n>,"alive":true}
   \`\`\`
 
-## Task Completion Protocol
-When you finish a task (success or failure), write a done signal file:
-- Path: ${donePath}
-- Content (JSON, one line):
-  {"taskId":"<id>","status":"completed","summary":"<1-2 sentence summary>","completedAt":"<ISO timestamp>"}
-- For failures, set status to "failed" and include the error in summary.
-- Use "completed" or "failed" only for status.
+## Message Protocol
+Send messages via CLI API:
+- To leader: \`omc team api send-message --input "{\\"team_name\\":\\"${teamName}\\",\\"from_worker\\":\\"${workerName}\\",\\"to_worker\\":\\"leader-fixed\\",\\"body\\":\\"<message>\\"}" --json\`
+- Check mailbox: \`omc team api mailbox-list --input "{\\"team_name\\":\\"${teamName}\\",\\"worker\\":\\"${workerName}\\"}" --json\`
+- Mark delivered: \`omc team api mailbox-mark-delivered --input "{\\"team_name\\":\\"${teamName}\\",\\"worker\\":\\"${workerName}\\",\\"message_id\\":\\"<id>\\"}" --json\`
+
+## Startup Handshake (Required)
+Before doing any task work, send exactly one startup ACK to the leader:
+\`omc team api send-message --input "{\\"team_name\\":\\"${teamName}\\",\\"from_worker\\":\\"${workerName}\\",\\"to_worker\\":\\"leader-fixed\\",\\"body\\":\\"ACK: ${workerName} initialized\\"}" --json\`
 
 ## Shutdown Protocol
-When you see a shutdown request (check .omc/state/team/${teamName}/shutdown.json):
-1. Finish your current task if close to completion
-2. Write an ACK file: .omc/state/team/${teamName}/workers/${workerName}/shutdown-ack.json
-3. Exit
+When you see a shutdown request in your inbox:
+1. Write your decision to: .omc/state/team/${teamName}/workers/${workerName}/shutdown-ack.json
+2. Format:
+   - Accept: {"status":"accept","reason":"ok","updated_at":"<iso>"}
+   - Reject: {"status":"reject","reason":"still working","updated_at":"<iso>"}
+3. Exit your session
+
+## Rules
+- Do NOT edit files outside the paths listed in your task description
+- Do NOT write lifecycle fields (status, owner, result, error) directly in task files; use CLI API
+- Do NOT spawn sub-agents. Complete work in this worker session only.
+- If blocked, write {"state": "blocked", "reason": "..."} to your status file
 
 ${bootstrapInstructions ? `## Additional Instructions\n${bootstrapInstructions}\n` : ''}`;
 }

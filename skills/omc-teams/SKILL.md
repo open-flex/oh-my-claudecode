@@ -44,7 +44,7 @@ Spawn N CLI worker processes in tmux panes to execute tasks in parallel. Support
 2. Calls `mcp__team__omc_run_team_start` then `mcp__team__omc_run_team_wait`
 3. The OMC MCP server spawns `runtime-cli.cjs` (co-located in the same install directory)
 4. The runtime creates tmux split-panes and launches the CLI processes
-5. Each worker reads its task from an inbox file and writes `done.json` on completion
+5. Each worker reads its task from an inbox file and completes via CLI API lifecycle transitions (claim-task, transition-task-status) when OMC_RUNTIME_V2=1 is set, or writes `done.json` in legacy mode
 6. The runtime collects results, shuts down workers, returns structured JSON
 7. Claude parses the result and reports to the user
 
@@ -173,6 +173,6 @@ state_write(mode="team", current_phase="completed", active=false)
 |--------|---------|-------------|
 | Worker type | Claude Code agents (`Task(subagent_type=...)`) | claude / codex / gemini CLI processes |
 | Invocation | `TeamCreate` / `SendMessage` / `TeamDelete` | `mcp__team__omc_run_team_start` + `omc_run_team_wait` |
-| Coordination | Native Claude Code team messaging | tmux panes + inbox files + `done.json` sentinels |
-| Communication | Native Claude Code team messaging | File-based (inbox.md → done.json) |
+| Coordination | Native Claude Code team messaging | tmux panes + inbox files + CLI API lifecycle (v2) or done.json sentinels (v1) |
+| Communication | Native Claude Code team messaging | File-based inbox + CLI API interop (v2) or inbox.md + done.json (v1) |
 | Use when | You want Claude agents with full tool access | You want CLI autonomy (codex/gemini) at scale |

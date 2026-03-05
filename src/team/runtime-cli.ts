@@ -12,6 +12,8 @@ import { join } from 'path';
 import { startTeam, monitorTeam, shutdownTeam } from './runtime.js';
 import type { TeamConfig, TeamRuntime } from './runtime.js';
 import { waitForSentinelReadiness } from './sentinel-gate.js';
+import { isRuntimeV2Enabled, monitorTeamV2, shutdownTeamV2 } from './runtime-v2.js';
+import type { TeamSnapshotV2 } from './runtime-v2.js';
 
 interface CliInput {
   teamName: string;
@@ -298,7 +300,91 @@ async function main(): Promise<void> {
     process.stderr.write(`[runtime-cli] Failed to persist pane IDs: ${err}\n`);
   }
 
-  // Poll loop
+  // ── V2 event-driven poll loop (no watchdog) ────────────────────────────
+  if (isRuntimeV2Enabled()) {
+    process.stderr.write('[runtime-cli] Using runtime v2 (event-driven, no watchdog)\n');
+
+    while (pollActive) {
+      await new Promise(r => setTimeout(r, pollIntervalMs));
+      if (!pollActive) break;
+
+      let snap: TeamSnapshotV2 | null;
+      try {
+        snap = await monitorTeamV2(teamName, cwd);
+      } catch (err) {
+        process.stderr.write(`[runtime-cli/v2] monitorTeamV2 error: ${err}\n`);
+        continue;
+      }
+
+      if (!snap) {
+        process.stderr.write('[runtime-cli/v2] monitorTeamV2 returned null (team config missing?)\n');
+        await doShutdown('failed');
+        return;
+      }
+
+      try {
+        await writePanesFile(jobId, runtime.workerPaneIds, runtime.leaderPaneId);
+      } catch {}
+
+      process.stderr.write(
+        `[runtime-cli/v2] phase=${snap.phase} pending=${snap.tasks.pending} in_progress=${snap.tasks.in_progress} completed=${snap.tasks.completed} failed=${snap.tasks.failed} dead=${snap.deadWorkers.length} totalMs=${snap.performance.total_ms}\n`,
+      );
+
+      // Terminal check via task counts
+      const v2Observed = snap.tasks.pending + snap.tasks.in_progress + snap.tasks.completed + snap.tasks.failed;
+      if (v2Observed !== expectedTaskCount) {
+        mismatchStreak += 1;
+        process.stderr.write(
+          `[runtime-cli/v2] Task-count mismatch observed=${v2Observed} expected=${expectedTaskCount} streak=${mismatchStreak}\n`,
+        );
+        if (mismatchStreak >= 2) {
+          process.stderr.write('[runtime-cli/v2] Persistent task-count mismatch — failing fast\n');
+          await doShutdown('failed');
+          return;
+        }
+        continue;
+      }
+      mismatchStreak = 0;
+
+      if (snap.allTasksTerminal) {
+        const hasFailures = snap.tasks.failed > 0;
+        if (!hasFailures) {
+          // Sentinel gate before declaring success
+          const sentinelLogPath = join(cwd, 'sentinel_stop.jsonl');
+          const gateResult = await waitForSentinelReadiness({
+            workspace: cwd,
+            logPath: sentinelLogPath,
+            timeoutMs: sentinelGateTimeoutMs,
+            pollIntervalMs: sentinelGatePollIntervalMs,
+          });
+          if (!gateResult.ready) {
+            process.stderr.write(
+              `[runtime-cli/v2] Sentinel gate blocked: ${gateResult.blockers.join('; ')}\n`,
+            );
+            await doShutdown('failed');
+            return;
+          }
+          await doShutdown('completed');
+        } else {
+          process.stderr.write('[runtime-cli/v2] Terminal failure detected from task counts\n');
+          await doShutdown('failed');
+        }
+        return;
+      }
+
+      // Dead worker heuristic
+      const allDead = runtime.workerPaneIds.length > 0 && snap.deadWorkers.length === runtime.workerPaneIds.length;
+      const hasOutstanding = (snap.tasks.pending + snap.tasks.in_progress) > 0;
+      if (allDead && hasOutstanding) {
+        process.stderr.write('[runtime-cli/v2] All workers dead with outstanding work — failing\n');
+        await doShutdown('failed');
+        return;
+      }
+    }
+    return;
+  }
+
+  // ── V1 poll loop (legacy watchdog-based) ────────────────────────────────
   while (pollActive) {
     await new Promise(r => setTimeout(r, pollIntervalMs));
 

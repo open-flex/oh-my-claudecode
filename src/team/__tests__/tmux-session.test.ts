@@ -219,7 +219,7 @@ describe('buildWorkerStartCommand', () => {
 
 describe('shouldAttemptAdaptiveRetry', () => {
   it('only enables adaptive retry for busy panes with visible unsent message', () => {
-    delete process.env.OMX_TEAM_AUTO_INTERRUPT_RETRY;
+    delete process.env.OMC_TEAM_AUTO_INTERRUPT_RETRY;
     expect(shouldAttemptAdaptiveRetry({
       paneBusy: false,
       latestCapture: '❯ check-inbox',
@@ -257,8 +257,8 @@ describe('shouldAttemptAdaptiveRetry', () => {
     })).toBe(true);
   });
 
-  it('respects OMX_TEAM_AUTO_INTERRUPT_RETRY=0', () => {
-    process.env.OMX_TEAM_AUTO_INTERRUPT_RETRY = '0';
+  it('respects OMC_TEAM_AUTO_INTERRUPT_RETRY=0', () => {
+    process.env.OMC_TEAM_AUTO_INTERRUPT_RETRY = '0';
     expect(shouldAttemptAdaptiveRetry({
       paneBusy: true,
       latestCapture: '❯ check-inbox',
@@ -266,7 +266,7 @@ describe('shouldAttemptAdaptiveRetry', () => {
       paneInCopyMode: false,
       retriesAttempted: 0,
     })).toBe(false);
-    delete process.env.OMX_TEAM_AUTO_INTERRUPT_RETRY;
+    delete process.env.OMC_TEAM_AUTO_INTERRUPT_RETRY;
   });
 });
 
@@ -279,7 +279,7 @@ describe('sendToWorker implementation guards', () => {
   });
 
   it('supports env-gated adaptive interrupt retry', () => {
-    expect(source).toContain('OMX_TEAM_AUTO_INTERRUPT_RETRY');
+    expect(source).toContain('OMC_TEAM_AUTO_INTERRUPT_RETRY');
     expect(source).toContain("await sendKey('C-u')");
   });
 

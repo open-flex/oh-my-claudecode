@@ -834,6 +834,27 @@ When team is linked to ralph, cancellation follows dependency order:
 
 If teammates are unresponsive, `TeamDelete` may fail. In that case, the cancel skill should wait briefly and retry, or inform the user to manually clean up `~/.claude/teams/{team_name}/` and `~/.claude/tasks/{team_name}/`.
 
+## Runtime V2 (Event-Driven)
+
+When `OMC_RUNTIME_V2=1` is set, the team runtime uses an event-driven architecture instead of the legacy done.json polling watchdog:
+
+- **No done.json**: Task completion is detected via CLI API lifecycle transitions (claim-task, transition-task-status)
+- **Snapshot-based monitoring**: Each poll cycle takes a point-in-time snapshot of tasks and workers, computes deltas, and emits events
+- **Event log**: All team events are appended to `.omc/state/team/{teamName}/events.jsonl`
+- **Worker status files**: Workers write status to `.omc/state/team/{teamName}/workers/{name}/status.json`
+- **Preserved**: Sentinel gate (blocks premature completion), circuit breaker (dead worker detection), failure sidecars
+
+The v2 runtime is feature-flagged and can be enabled per-session. The legacy v1 runtime remains the default.
+
+## Dynamic Scaling
+
+When `OMC_TEAM_SCALING_ENABLED=1` is set, the team supports mid-session scaling:
+
+- **scale_up**: Add workers to a running team (respects max_workers limit)
+- **scale_down**: Remove idle workers with graceful drain (workers finish current task before removal)
+- File-based scaling lock prevents concurrent scale operations
+- Monotonic worker index counter ensures unique worker names across scale events
+
 ## Configuration
 
 Optional settings via `.omc-config.json`:
