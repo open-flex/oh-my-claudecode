@@ -6,6 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import { execSync } from 'child_process';
 import { join } from 'path';
+import process from 'process';
 import { detectBashFailure, detectWriteFailure, isNonZeroExitWithOutput, summarizeAgentResult } from '../../scripts/post-tool-verifier.mjs';
 
 const SCRIPT_PATH = join(process.cwd(), 'scripts', 'post-tool-verifier.mjs');
