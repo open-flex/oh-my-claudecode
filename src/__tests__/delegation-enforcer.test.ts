@@ -516,6 +516,19 @@ describe('delegation-enforcer', () => {
       }
     });
 
+    it('strips model when Bedrock ARN auto-enables forceInherit', () => {
+      process.env.ANTHROPIC_MODEL = 'arn:aws:bedrock:us-east-2:123456789012:inference-profile/global.anthropic.claude-opus-4-6-v1:0';
+      const input: AgentInput = {
+        description: 'Test task',
+        prompt: 'Do something',
+        subagent_type: 'oh-my-claudecode:executor',
+        model: 'sonnet'
+      };
+      const result = enforceModel(input);
+      expect(result.model).toBe('inherit');
+      expect(result.modifiedInput.model).toBeUndefined();
+    });
+
     it('strips model when non-Claude provider auto-enables forceInherit', () => {
       process.env.CLAUDE_MODEL = 'glm-5';
       // forceInherit is auto-enabled by loadConfig for non-Claude providers

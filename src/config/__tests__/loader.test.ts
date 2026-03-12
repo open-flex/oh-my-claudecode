@@ -50,6 +50,12 @@ describe('loadConfig() — auto-forceInherit for non-standard providers', () => 
     expect(config.routing?.forceInherit).toBe(true);
   });
 
+  it('auto-enables forceInherit for Bedrock inference-profile ARN model IDs', () => {
+    process.env.ANTHROPIC_MODEL = 'arn:aws:bedrock:us-east-2:123456789012:inference-profile/global.anthropic.claude-opus-4-6-v1:0';
+    const config = loadConfig();
+    expect(config.routing?.forceInherit).toBe(true);
+  });
+
   it('auto-enables forceInherit when CLAUDE_CODE_USE_VERTEX=1', () => {
     process.env.CLAUDE_CODE_USE_VERTEX = '1';
     const config = loadConfig();

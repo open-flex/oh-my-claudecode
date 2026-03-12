@@ -69,6 +69,16 @@ describe('isBedrock()', () => {
     expect(isBedrock()).toBe(true);
   });
 
+  it('detects Bedrock inference-profile ARNs', () => {
+    process.env.ANTHROPIC_MODEL = 'arn:aws:bedrock:us-east-2:123456789012:inference-profile/global.anthropic.claude-opus-4-6-v1:0';
+    expect(isBedrock()).toBe(true);
+  });
+
+  it('detects Bedrock application-inference-profile ARNs', () => {
+    process.env.CLAUDE_MODEL = 'arn:aws:bedrock:us-west-2:123456789012:application-inference-profile/abc123/global.anthropic.claude-sonnet-4-6-v1:0';
+    expect(isBedrock()).toBe(true);
+  });
+
   it('also checks CLAUDE_MODEL', () => {
     process.env.CLAUDE_MODEL = 'global.anthropic.claude-sonnet-4-6[1m]';
     expect(isBedrock()).toBe(true);
@@ -129,6 +139,11 @@ describe('isNonClaudeProvider()', () => {
 
   it('returns true for global. Bedrock inference profile (the [1m] case)', () => {
     process.env.ANTHROPIC_MODEL = 'global.anthropic.claude-sonnet-4-6[1m]';
+    expect(isNonClaudeProvider()).toBe(true);
+  });
+
+  it('returns true for Bedrock inference-profile ARNs', () => {
+    process.env.ANTHROPIC_MODEL = 'arn:aws:bedrock:us-east-2:123456789012:inference-profile/global.anthropic.claude-opus-4-6-v1:0';
     expect(isNonClaudeProvider()).toBe(true);
   });
 
