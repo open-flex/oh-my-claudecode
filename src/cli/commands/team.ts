@@ -397,7 +397,6 @@ async function handleTeamStart(parsed: ParsedTeamArgs, cwd: string): Promise<voi
         ? parsed.task.slice(0, 80)
         : `Worker ${i + 1}: ${parsed.task}`.slice(0, 80),
       description: parsed.task,
-      owner: `worker-${i + 1}`,
     });
   }
 

@@ -22,6 +22,7 @@ import { existsSync } from 'fs';
 import { mkdir, readdir, readFile, writeFile } from 'fs/promises';
 import { performance } from 'perf_hooks';
 import { TeamPaths, absPath, teamStateRoot } from './state-paths.js';
+import { allocateStartupTasks } from './allocation-policy.js';
 import {
   readTeamConfig,
   readWorkerStatus,
@@ -604,11 +605,12 @@ export async function startTeamV2(config: StartTeamV2Config): Promise<TeamRuntim
     }, null, 2), 'utf-8');
   }
 
+  const startupAllocations = allocateStartupTasks(config.workerCount, config.tasks);
+
   // Set up worker state dirs and overlays (with v2 CLI API instructions)
-  const workerNames: string[] = [];
-  for (let i = 0; i < config.tasks.length; i++) {
-    const wName = `worker-${i + 1}`;
-    workerNames.push(wName);
+  const workerNames = Array.from({ length: config.workerCount }, (_, index) => `worker-${index + 1}`);
+  for (let i = 0; i < workerNames.length; i++) {
+    const wName = workerNames[i];
     const agentType = (agentTypes[i % agentTypes.length] ?? agentTypes[0] ?? 'claude') as CliAgentType;
     await ensureWorkerStateDir(sanitized, wName, leaderCwd);
     await writeWorkerOverlay({
@@ -696,13 +698,22 @@ export async function startTeamV2(config: StartTeamV2Config): Promise<TeamRuntim
   };
   await writeFile(absPath(leaderCwd, TeamPaths.manifest(sanitized)), JSON.stringify(teamManifest, null, 2), 'utf-8');
 
-  // Spawn workers for initial tasks (up to workerCount concurrent)
-  const maxConcurrent = Math.min(agentTypes.length, config.tasks.length);
-  for (let i = 0; i < maxConcurrent; i++) {
-    const wName = workerNames[i];
-    const taskId = String(i + 1);
-    const task = config.tasks[i];
-    if (!task) break;
+  // Spawn workers for initial tasks (at most one startup task per worker)
+  const initialStartupAllocations: typeof startupAllocations = [];
+  const seenStartupWorkers = new Set<string>();
+  for (const decision of startupAllocations) {
+    if (seenStartupWorkers.has(decision.workerName)) continue;
+    initialStartupAllocations.push(decision);
+    seenStartupWorkers.add(decision.workerName);
+    if (initialStartupAllocations.length >= config.workerCount) break;
+  }
+
+  for (const decision of initialStartupAllocations) {
+    const wName = decision.workerName;
+    const workerIndex = Number.parseInt(wName.replace('worker-', ''), 10) - 1;
+    const taskId = String(decision.taskIndex + 1);
+    const task = config.tasks[decision.taskIndex];
+    if (!task || workerIndex < 0) continue;
 
     const workerLaunch = await spawnV2Worker({
       sessionName,
@@ -710,8 +721,8 @@ export async function startTeamV2(config: StartTeamV2Config): Promise<TeamRuntim
       existingWorkerPaneIds: workerPaneIds,
       teamName: sanitized,
       workerName: wName,
-      workerIndex: i,
-      agentType: (agentTypes[i % agentTypes.length] ?? agentTypes[0] ?? 'claude') as CliAgentType,
+      workerIndex,
+      agentType: (agentTypes[workerIndex % agentTypes.length] ?? agentTypes[0] ?? 'claude') as CliAgentType,
       task,
       taskId,
       cwd: leaderCwd,
@@ -720,7 +731,7 @@ export async function startTeamV2(config: StartTeamV2Config): Promise<TeamRuntim
 
     if (workerLaunch.paneId) {
       workerPaneIds.push(workerLaunch.paneId);
-      const workerInfo = workersInfo[i];
+      const workerInfo = workersInfo[workerIndex];
       if (workerInfo) {
         workerInfo.pane_id = workerLaunch.paneId;
         workerInfo.assigned_tasks = workerLaunch.startupAssigned ? [taskId] : [];
