@@ -17,14 +17,18 @@ const SHOULD_USE_WINDOWS_SHELL = process.platform === 'win32';
  * - codex: `codex exec --dangerously-bypass-approvals-and-sandbox <prompt>`
  * - gemini: `gemini -p <prompt> --yolo`
  */
-function buildProviderArgs(provider, prompt) {
+function buildProviderArgs(provider, prompt, { pipePromptViaStdin = false } = {}) {
   if (provider === 'codex') {
-    return ['exec', '--dangerously-bypass-approvals-and-sandbox', prompt];
+    return ['exec', '--dangerously-bypass-approvals-and-sandbox', pipePromptViaStdin ? '-' : prompt];
   }
   if (provider === 'gemini') {
-    return ['-p', prompt, '--yolo'];
+    return pipePromptViaStdin ? ['--yolo'] : ['-p', prompt, '--yolo'];
   }
   return ['-p', prompt];
+}
+
+function shouldPipePromptViaStdin(provider) {
+  return SHOULD_USE_WINDOWS_SHELL && (provider === 'codex' || provider === 'gemini');
 }
 
 const ASK_ORIGINAL_TASK_ENV = 'OMC_ASK_ORIGINAL_TASK';
@@ -209,12 +213,14 @@ async function main() {
 
   ensureBinary(provider, binary);
 
-  const providerArgs = buildProviderArgs(provider, prompt);
+  const pipePromptViaStdin = shouldPipePromptViaStdin(provider);
+  const providerArgs = buildProviderArgs(provider, prompt, { pipePromptViaStdin });
   const run = spawnSync(binary, providerArgs, {
     encoding: 'utf8',
     maxBuffer: 10 * 1024 * 1024,
     env: buildProviderEnv(provider),
     shell: SHOULD_USE_WINDOWS_SHELL,
+    ...(pipePromptViaStdin ? { input: prompt } : {}),
   });
 
   const stdout = run.stdout || '';

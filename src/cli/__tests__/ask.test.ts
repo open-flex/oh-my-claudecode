@@ -177,6 +177,7 @@ function writeSpawnSyncCapturePrelude(dir: string): string {
       "      shell: options.shell ?? false,",
       "      encoding: options.encoding ?? null,",
       "      stdio: options.stdio ?? null,",
+      "      input: options.input ?? null,",
       '    },',
       '  });',
       "  if (mode === 'missing' && command === 'where') {",
@@ -490,14 +491,14 @@ describe('run-provider-advisor script contract', () => {
     }
   });
 
-  it('uses shell:true for Windows codex binary probe and execution', () => {
+  it('pipes the Windows codex prompt over stdin to avoid shell arg splitting', () => {
     const wd = mkdtempSync(join(tmpdir(), 'omc-ask-codex-win32-shell-'));
     try {
       const capturePath = join(wd, 'spawn-sync-calls.json');
       const preludePath = writeSpawnSyncCapturePrelude(wd);
       const result = runAdvisorScriptWithPrelude(
         preludePath,
-        ['codex', '--prompt', 'windows cmd support'],
+        ['codex', '--prompt', 'windows cmd support 你好'],
         wd,
         { SPAWN_CAPTURE_PATH: capturePath },
       );
@@ -508,19 +509,56 @@ describe('run-provider-advisor script contract', () => {
       const calls = JSON.parse(readFileSync(capturePath, 'utf8')) as Array<{
         command: string;
         args: string[];
-        options: { shell: boolean; encoding: string | null; stdio: string | null };
+        options: { shell: boolean; encoding: string | null; stdio: string | null; input: string | null };
       }>;
 
       expect(calls).toHaveLength(2);
       expect(calls[0]).toMatchObject({
         command: 'codex',
         args: ['--version'],
-        options: { shell: true, encoding: 'utf8', stdio: 'ignore' },
+        options: { shell: true, encoding: 'utf8', stdio: 'ignore', input: null },
       });
       expect(calls[1]).toMatchObject({
         command: 'codex',
-        args: ['exec', '--dangerously-bypass-approvals-and-sandbox', 'windows cmd support'],
-        options: { shell: true, encoding: 'utf8', stdio: null },
+        args: ['exec', '--dangerously-bypass-approvals-and-sandbox', '-'],
+        options: { shell: true, encoding: 'utf8', stdio: null, input: 'windows cmd support 你好' },
+      });
+    } finally {
+      rmSync(wd, { recursive: true, force: true });
+    }
+  });
+
+  it('pipes the Windows gemini prompt over stdin to avoid --prompt conflicts and AttachConsole failures', () => {
+    const wd = mkdtempSync(join(tmpdir(), 'omc-ask-gemini-win32-stdin-'));
+    try {
+      const capturePath = join(wd, 'spawn-sync-calls.json');
+      const preludePath = writeSpawnSyncCapturePrelude(wd);
+      const result = runAdvisorScriptWithPrelude(
+        preludePath,
+        ['gemini', '--prompt', 'ship safely 你好'],
+        wd,
+        { SPAWN_CAPTURE_PATH: capturePath },
+      );
+
+      expect(result.error).toBeUndefined();
+      expect(result.status).toBe(0);
+
+      const calls = JSON.parse(readFileSync(capturePath, 'utf8')) as Array<{
+        command: string;
+        args: string[];
+        options: { shell: boolean; encoding: string | null; stdio: string | null; input: string | null };
+      }>;
+
+      expect(calls).toHaveLength(2);
+      expect(calls[0]).toMatchObject({
+        command: 'gemini',
+        args: ['--version'],
+        options: { shell: true, encoding: 'utf8', stdio: 'ignore', input: null },
+      });
+      expect(calls[1]).toMatchObject({
+        command: 'gemini',
+        args: ['--yolo'],
+        options: { shell: true, encoding: 'utf8', stdio: null, input: 'ship safely 你好' },
       });
     } finally {
       rmSync(wd, { recursive: true, force: true });
@@ -551,14 +589,14 @@ describe('run-provider-advisor script contract', () => {
       const calls = JSON.parse(readFileSync(capturePath, 'utf8')) as Array<{
         command: string;
         args: string[];
-        options: { shell: boolean; encoding: string | null; stdio: string | null };
+        options: { shell: boolean; encoding: string | null; stdio: string | null; input: string | null };
       }>;
 
       expect(calls).toHaveLength(2);
       expect(calls[0]).toMatchObject({
         command: 'codex',
         args: ['--version'],
-        options: { shell: true, encoding: 'utf8', stdio: 'ignore' },
+        options: { shell: true, encoding: 'utf8', stdio: 'ignore', input: null },
       });
       expect(calls[1]).toMatchObject({
         command: 'where',
