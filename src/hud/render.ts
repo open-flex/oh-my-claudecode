@@ -438,12 +438,20 @@ export async function render(
     detail: config.layout?.detail ?? DEFAULT_ELEMENT_ORDER.detail,
   };
 
-  /** Collect inline elements in layout order */
+  /** Collect inline elements in layout order.
+   *  Also picks up detail-origin elements moved to an inline group —
+   *  their detail lines are joined into a single inline string. */
   function collectInline(order: string[]): string[] {
     const result: string[] = [];
     for (const name of order) {
       const el = rendered.get(name);
-      if (el) result.push(el);
+      if (el) {
+        result.push(el);
+      } else {
+        // Detail elements moved to an inline group render as joined inline
+        const lines = renderedDetail.get(name);
+        if (lines && lines.length > 0) result.push(lines.join(" "));
+      }
     }
     return result;
   }
