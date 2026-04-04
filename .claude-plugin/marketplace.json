@@ -1,6 +1,6 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "omc",
+  "name": "open-flex",
   "description": "Claude Code native multi-agent orchestration - intelligent model routing, 28 agents, 32 skills",
   "owner": {
     "name": "Yeachan Heo",
