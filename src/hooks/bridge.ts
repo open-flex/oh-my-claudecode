@@ -915,49 +915,21 @@ async function processKeywordDetector(input: HookInput): Promise<HookOutput> {
         // Lazy-load ralph module
         const {
           createRalphLoopHook,
-          findPrdPath: findPrd,
-          initPrd: initPrdFn,
-          initProgress: initProgressFn,
-          detectNoPrdFlag: detectNoPrd,
-          stripNoPrdFlag: stripNoPrd,
           detectCriticModeFlag,
           stripCriticModeFlag,
         } = await import("./ralph/index.js");
 
-        // Handle --no-prd flag
-        const noPrd = detectNoPrd(promptText);
         const criticMode = detectCriticModeFlag(promptText) ?? undefined;
-        const promptWithoutCriticFlag = stripCriticModeFlag(promptText);
-        const cleanPrompt = noPrd
-          ? stripNoPrd(promptWithoutCriticFlag)
-          : promptWithoutCriticFlag;
-
-        // Auto-generate scaffold PRD if none exists and --no-prd not set
-        const existingPrd = findPrd(directory);
-        if (!noPrd && !existingPrd) {
-          const { basename } = await import("path");
-          const { execSync } = await import("child_process");
-          const projectName = basename(directory);
-          let branchName = "ralph/task";
-          try {
-            branchName = execSync("git rev-parse --abbrev-ref HEAD", {
-              cwd: directory,
-              encoding: "utf-8",
-              timeout: 5000,
-            }).trim();
-          } catch {
-            // Not a git repo or git not available — use fallback
-          }
-          initPrdFn(directory, projectName, branchName, cleanPrompt);
-          initProgressFn(directory);
-        }
+        const cleanPrompt = stripCriticModeFlag(promptText);
 
         // Activate ralph state which also auto-activates ultrawork
         const hook = createRalphLoopHook(directory);
         const started = hook.startLoop(
           sessionId,
           cleanPrompt,
-          criticMode ? { criticMode } : undefined,
+          {
+            ...(criticMode ? { criticMode } : {}),
+          },
         );
         if (started) {
           markModeAwaitingConfirmation(directory, sessionId, 'ralph', 'ultrawork');
@@ -1959,11 +1931,6 @@ async function processPostToolUse(input: HookInput): Promise<HookOutput> {
     if (skillName === "ralph") {
       const {
         createRalphLoopHook,
-        findPrdPath: findPrd,
-        initPrd: initPrdFn,
-        initProgress: initProgressFn,
-        detectNoPrdFlag: detectNoPrd,
-        stripNoPrdFlag: stripNoPrd,
         detectCriticModeFlag,
         stripCriticModeFlag,
       } = await import("./ralph/index.js");
@@ -1972,39 +1939,16 @@ async function processPostToolUse(input: HookInput): Promise<HookOutput> {
           ? input.prompt
           : "Ralph loop activated via Skill tool";
 
-      // Handle --no-prd flag
-      const noPrd = detectNoPrd(rawPrompt);
       const criticMode = detectCriticModeFlag(rawPrompt) ?? undefined;
-      const promptWithoutCriticFlag = stripCriticModeFlag(rawPrompt);
-      const cleanPrompt = noPrd
-        ? stripNoPrd(promptWithoutCriticFlag)
-        : promptWithoutCriticFlag;
-
-      // Auto-generate scaffold PRD if none exists and --no-prd not set
-      const existingPrd = findPrd(directory);
-      if (!noPrd && !existingPrd) {
-        const { basename } = await import("path");
-        const { execSync } = await import("child_process");
-        const projectName = basename(directory);
-        let branchName = "ralph/task";
-        try {
-          branchName = execSync("git rev-parse --abbrev-ref HEAD", {
-            cwd: directory,
-            encoding: "utf-8",
-            timeout: 5000,
-          }).trim();
-        } catch {
-          // Not a git repo or git not available — use fallback
-        }
-        initPrdFn(directory, projectName, branchName, cleanPrompt);
-        initProgressFn(directory);
-      }
+      const cleanPrompt = stripCriticModeFlag(rawPrompt);
 
       const hook = createRalphLoopHook(directory);
       hook.startLoop(
         input.sessionId,
         cleanPrompt,
-        criticMode ? { criticMode } : undefined,
+        {
+          ...(criticMode ? { criticMode } : {}),
+        },
       );
     }
 
