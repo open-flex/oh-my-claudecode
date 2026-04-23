@@ -108,7 +108,7 @@ OMC exposes two different surfaces:
 | Ask providers | `omc ask codex "review this patch"` | `/ask codex "review this patch"` | Both route through the same advisor flow. |
 | Team orchestration | `omc team 2:codex "review auth flow"` | `/team 3:executor "fix all TypeScript errors"` | Both exist, but they are different runtimes: `omc team` launches tmux CLI workers; `/team` runs the in-session native team workflow. |
 | Autopilot / Ralph / Ultrawork / Deep Interview | — | `/autopilot ...`, `/ralph ...`, `/ultrawork ...`, `/deep-interview ...` | These are in-session skills. There is no `omc autopilot` / `omc ralph` / `omc ultrawork` CLI subcommand in this repo. |
-| Autoresearch | `omc autoresearch` (**hard-deprecated shim**) | `/deep-interview --autoresearch ...` + `/oh-my-claudecode:autoresearch` | Setup stays in deep-interview; execution now belongs to the stateful skill. |
+| Autoresearch | — | `/deep-interview --autoresearch ...` + `/oh-my-claudecode:autoresearch` | Setup stays in deep-interview; execution belongs to the stateful skill. |
 
 ### Not Sure Where to Start?
 
@@ -344,7 +344,7 @@ Phase-1 aliases `OMX_ASK_ADVISOR_SCRIPT` and `OMX_ASK_ORIGINAL_TASK` are accepte
 
 ### Autoresearch (stateful skill)
 
-`omc autoresearch` is now a **hard-deprecated shim**. The authoritative workflow is:
+Autoresearch is available via in-session workflow:
 
 ```bash
 /deep-interview --autoresearch improve startup performance

@@ -7,6 +7,7 @@ This guide covers all migration paths for oh-my-claudecode. Find your current ve
 ## Table of Contents
 
 - [Unreleased: Team MCP Runtime Deprecation (CLI-Only)](#unreleased-team-mcp-runtime-deprecation-cli-only)
+- [Unreleased: Autoresearch CLI Removal](#unreleased-autoresearch-cli-removal)
 - [v3.5.3 → v3.5.5: Test Fixes & Cleanup](#v353--v355-test-fixes--cleanup)
 - [v3.5.2 → v3.5.3: Skill Consolidation](#v352--v353-skill-consolidation)
 - [v2.x → v3.0: Package Rename & Auto-Activation](#v2x--v30-package-rename--auto-activation)
@@ -60,6 +61,27 @@ omc team status review-auth-flow
 omc team shutdown review-auth-flow --force
 omc team api list-tasks --input '{"team_name":"review-auth-flow"}' --json
 ```
+
+---
+
+## Unreleased: Autoresearch CLI Removal
+
+### TL;DR
+
+`omc autoresearch` has been removed from the terminal CLI. Autoresearch now runs only through in-session skills.
+
+### New Authoritative Flow
+
+```bash
+/deep-interview --autoresearch "<mission idea>"
+/oh-my-claudecode:autoresearch
+```
+
+### What to Change
+
+1. Remove any shell scripts or docs that call `omc autoresearch ...`.
+2. Replace them with the in-session skill flow above.
+3. Keep mission setup in `deep-interview`; keep runtime execution in `autoresearch` skill.
 
 ---
 

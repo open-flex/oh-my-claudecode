@@ -87134,39 +87134,6 @@ function warnIfWin32() {
   }
 }
 
-// src/cli/autoresearch.ts
-var AUTORESEARCH_HELP = `omc autoresearch - HARD DEPRECATED
-
-This command is no longer the authoritative autoresearch workflow.
-
-Use this flow instead:
-  1. /deep-interview --autoresearch "<mission idea>"
-     - use deep-interview to generate/setup the mission and evaluator
-  2. /oh-my-claudecode:autoresearch
-     - run the stateful single-mission autoresearch skill
-
-Key behavior:
-  - v1 is single-mission only
-  - runtime requires an explicit evaluator script/command
-  - non-passing iterations do not stop the run
-  - the run stops at an explicit max-runtime ceiling
-
-Legacy CLI examples such as:
-  omc autoresearch --mission "..." --eval "..."
-  omc autoresearch init ...
-  omc autoresearch --resume ...
-are hard-deprecated shims and no longer launch the old runtime.
-`;
-function renderDeprecationMessage(args) {
-  const suffix = args.length > 0 ? `
-Received legacy arguments: ${args.join(" ")}
-` : "\n";
-  return `${AUTORESEARCH_HELP}${suffix}`;
-}
-async function autoresearchCommand(args) {
-  console.log(renderDeprecationMessage(args));
-}
-
 // src/mcp/standalone-shutdown.ts
 function resolveParentPid(processRef, overrideParentPid) {
   if (typeof overrideParentPid === "number") {
@@ -88195,9 +88162,6 @@ program2.command("mission-board").description("Render the opt-in mission board s
 });
 program2.command("team").description("Team CLI API for worker lifecycle operations").helpOption(false).allowUnknownOption(true).allowExcessArguments(true).argument("[args...]", "team subcommand arguments").action(async (args) => {
   await teamCommand(args);
-});
-program2.command("autoresearch").description("Hard-deprecated shim that redirects users to deep-interview + autoresearch skill").helpOption(false).allowUnknownOption(true).allowExcessArguments(true).argument("[args...]", "autoresearch subcommand arguments").action(async (args) => {
-  await autoresearchCommand(args);
 });
 program2.command("ralphthon").description("Autonomous hackathon lifecycle: interview -> execute -> harden -> done").helpOption(false).allowUnknownOption(true).allowExcessArguments(true).argument("[args...]", "ralphthon arguments").action(async (args) => {
   await ralphthonCommand(args);

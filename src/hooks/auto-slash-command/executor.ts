@@ -18,7 +18,7 @@ import type {
 } from './types.js';
 import { resolveLiveData } from './live-data.js';
 import { parseFrontmatter, parseFrontmatterAliases, stripOptionalQuotes } from '../../utils/frontmatter.js';
-import { formatOmcCliInvocation, rewriteOmcCliInvocations } from '../../utils/omc-cli-rendering.js';
+import { rewriteOmcCliInvocations } from '../../utils/omc-cli-rendering.js';
 import { parseSkillPipelineMetadata, renderSkillPipelineGuidance } from '../../utils/skill-pipeline.js';
 import { renderSkillResourcesGuidance } from '../../utils/skill-resources.js';
 import { renderSkillRuntimeGuidance } from '../../features/builtin-skills/runtime-guidance.js';
@@ -264,7 +264,7 @@ function renderDeepInterviewAutoresearchGuidance(args: string): string {
     '- Treat evaluator clarity as a required readiness gate before launch.',
     '- When the mission and evaluator are ready, write setup artifacts and hand off with:',
     '  `Skill("oh-my-claudecode:autoresearch")`',
-    '- Do **not** hand off to `omc-plan`, `autopilot`, `ralph`, `team`, or the hard-deprecated `omc autoresearch` CLI in this mode.',
+    '- Do **not** hand off to `omc-plan`, `autopilot`, `ralph`, or `team` in this mode.',
   ];
 
   if (missionSeed) {

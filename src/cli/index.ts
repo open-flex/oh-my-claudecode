@@ -60,7 +60,6 @@ import { launchCommand } from './launch.js';
 import { interopCommand } from './interop.js';
 import { askCommand, ASK_USAGE } from './ask.js';
 import { warnIfWin32 } from './win32-warning.js';
-import { autoresearchCommand } from './autoresearch.js';
 import { runHudWatchLoop } from './hud-watch.js';
 
 const version = getRuntimePackageVersion();
@@ -1420,20 +1419,6 @@ program
   .argument('[args...]', 'team subcommand arguments')
   .action(async (args: string[]) => {
     await teamCommand(args);
-  });
-
-/**
- * Autoresearch command - hard-deprecated shim preserved only for migration messaging
- */
-program
-  .command('autoresearch')
-  .description('Hard-deprecated shim that redirects users to deep-interview + autoresearch skill')
-  .helpOption(false)
-  .allowUnknownOption(true)
-  .allowExcessArguments(true)
-  .argument('[args...]', 'autoresearch subcommand arguments')
-  .action(async (args: string[]) => {
-    await autoresearchCommand(args);
   });
 
 /**

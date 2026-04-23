@@ -1,3 +1,18 @@
+## Unreleased
+
+### Breaking Changes
+
+- **cli:** Removed `omc autoresearch` terminal subcommand.
+  - Use in-session workflow instead:
+    - `/deep-interview --autoresearch "<mission idea>"`
+    - `/oh-my-claudecode:autoresearch`
+
+### Documentation
+
+- Updated CLI-vs-skill docs to remove `omc autoresearch` shim references and reflect the in-session-only autoresearch flow.
+
+---
+
 # oh-my-claudecode v4.13.3: Bug Fixes
 
 ## Release Notes

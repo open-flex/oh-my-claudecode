@@ -22,7 +22,7 @@ function passedTests(output) {
 
 try {
   const runtime = run('npm run test:run -- src/autoresearch/__tests__/runtime.test.ts src/autoresearch/__tests__/runtime-parity-extra.test.ts');
-  const cli = run('npm test -- --run src/cli/__tests__/autoresearch.test.ts src/cli/__tests__/autoresearch-guided.test.ts');
+  const cli = run('npm test -- --run src/cli/__tests__/autoresearch-guided.test.ts');
   const build = run('npm run build');
 
   const runtimeFiles = passedTestFiles(runtime.output);
