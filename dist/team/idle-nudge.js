@@ -1,7 +1,7 @@
 /**
- * Idle Pane Nudge for Team MCP Wait
+ * Idle Pane Nudge for Team Runtime Polling
  *
- * Detects idle teammate panes during omc_run_team_wait polling and sends
+ * Detects idle teammate panes during runtime polling and sends
  * tmux send-keys continuation nudges. Only nudges worker panes (never the
  * leader) in the current team session.
  *

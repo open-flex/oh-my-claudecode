@@ -134,9 +134,9 @@ This directory contains all TypeScript source code organized into modules:
 
 Key packages by module: `zod` (tools, features), `@ast-grep/napi` (tools/ast), `vscode-languageserver-protocol` (tools/lsp), `better-sqlite3` (hooks/swarm), `chalk` (cli, hud). See root AGENTS.md for full dependency list.
 
-### MCP Runtime Notes
+### Team Runtime Notes
 
-- Team MCP runtime status/wait behavior is implemented in `mcp/team-server.ts`.
+- Team runtime is CLI-first via `omc team ...`.
 - Shared team-job convergence helpers (artifact-first status convergence, scoped team-state cleanup) live in `mcp/team-job-convergence.ts`.
 
 ## Module Dependency Graph

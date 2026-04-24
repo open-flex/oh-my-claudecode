@@ -6,7 +6,7 @@ This guide covers all migration paths for oh-my-claudecode. Find your current ve
 
 ## Table of Contents
 
-- [Unreleased: Team MCP Runtime Deprecation (CLI-Only)](#unreleased-team-mcp-runtime-deprecation-cli-only)
+- [Unreleased: Team MCP Runtime Removal (CLI-Only)](#unreleased-team-mcp-runtime-removal-cli-only)
 - [Unreleased: Autoresearch CLI Removal](#unreleased-autoresearch-cli-removal)
 - [v3.5.3 → v3.5.5: Test Fixes & Cleanup](#v353--v355-test-fixes--cleanup)
 - [v3.5.2 → v3.5.3: Skill Consolidation](#v352--v353-skill-consolidation)
@@ -16,18 +16,12 @@ This guide covers all migration paths for oh-my-claudecode. Find your current ve
 
 ---
 
-## Unreleased: Team MCP Runtime Deprecation (CLI-Only)
+## Unreleased: Team MCP Runtime Removal (CLI-Only)
 
 ### TL;DR
 
-`omc_run_team_start/status/wait/cleanup` are now hard-deprecated at runtime. Calls return:
-
-```json
-{
-  "code": "deprecated_cli_only",
-  "message": "Legacy team MCP runtime tools are deprecated. Use the omc team CLI instead."
-}
-```
+The Team MCP runtime server has been removed from the supported runtime surface.
+`omc_run_team_start/status/wait/cleanup` are no longer available.
 
 Use CLI commands instead:
 
@@ -44,12 +38,12 @@ Use CLI commands instead:
 
 1. Replace MCP runtime tool calls with CLI equivalents.
 2. Update skills/prompts from `/omc-teams ...` to `omc team ...` syntax.
-3. Legacy Team MCP runtime is now opt-in only (not enabled by default). If you enable it manually, treat responses as deprecation-only compatibility output.
+3. Remove any manual `team-mcp.cjs` MCP server registrations from local settings.
 
 ### Example mapping
 
 ```bash
-# Old (deprecated runtime path)
+# Old (removed runtime path)
 mcp__team__omc_run_team_start(...)
 mcp__team__omc_run_team_status({ job_id: ... })
 mcp__team__omc_run_team_wait({ job_id: ... })

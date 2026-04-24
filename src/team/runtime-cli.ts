@@ -368,7 +368,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // Persist pane IDs so MCP server can clean up explicitly via omc_run_team_cleanup.
+  // Persist pane IDs so cleanup flows can terminate worker panes deterministically.
   const jobId = process.env.OMC_JOB_ID;
   const expectedTaskCount = tasks.length;
   let mismatchStreak = 0;

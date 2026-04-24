@@ -9,7 +9,7 @@ level: 4
 
 Spawn N CLI worker processes in tmux panes to execute tasks in parallel. Supports `claude`, `codex`, and `gemini` agent types.
 
-`/omc-teams` is a legacy compatibility skill for the CLI-first runtime: use `omc team ...` commands (not deprecated MCP runtime tools).
+`/omc-teams` runs the CLI-first team runtime via `omc team ...` commands.
 
 ## Usage
 
@@ -157,17 +157,6 @@ Report task results with completion/failure summary and any remaining risks.
 ```text
 state_write(mode="team", current_phase="complete", active=false)
 ```
-
-## Deprecated Runtime Note
-
-Legacy MCP runtime tools are deprecated for execution:
-
-- `omc_run_team_start`
-- `omc_run_team_status`
-- `omc_run_team_wait`
-- `omc_run_team_cleanup`
-
-If encountered, switch to `omc team ...` CLI commands.
 
 ## Error Reference
 

@@ -887,7 +887,7 @@ export async function injectToLeaderPane(
 ): Promise<boolean> {
   const prefixed = `[OMC_TMUX_INJECT] ${message}`.slice(0, 200);
 
-  // If the leader is running a blocking tool (e.g. omc_run_team_wait shows
+  // If the leader is running a blocking operation (for example while waiting
   // "esc to interrupt"), send C-c first so the message is not queued in the
   // stdin buffer behind the blocked process.
   try {

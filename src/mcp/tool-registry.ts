@@ -9,8 +9,6 @@
  * when @ast-grep/napi is unavailable — they are always present in the registry
  * but return a helpful error message instead of results.
  *
- * Team runtime tools (omc_run_team_start, omc_run_team_status) are intentionally
- * excluded: they live in the separate "team" MCP server (bridge/team-mcp.cjs).
  */
 
 import { lspTools } from '../tools/lsp-tools.js';

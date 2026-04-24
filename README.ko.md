@@ -89,7 +89,7 @@ omc team status auth-review
 omc team shutdown auth-review
 ```
 
-`/omc-teams`는 레거시 호환 스킬로 유지되며, 현재는 내부적으로 `omc team ...`으로 라우팅됩니다.
+`/omc-teams`는 동일한 `omc team ...` CLI 런타임을 빠르게 호출하는 스킬 단축 경로입니다.
 
 하나의 명령으로 Codex + Gemini 작업을 처리하려면 **`/ccg`** 스킬을 사용하세요:
 
@@ -234,7 +234,7 @@ server.py:42의 핸들러를 try/except ClientDisconnectedError로 감싸세요.
 
 **참고:**
 - **ralph는 ultrawork를 포함합니다:** ralph 모드를 활성화하면 자동으로 ultrawork의 병렬 실행이 포함됩니다. 키워드를 결합할 필요가 없습니다.
-- `/omc-teams`는 레거시 호환 경로로 남아 있으며 내부적으로 `omc team ...`으로 라우팅됩니다.
+- `/omc-teams`는 `omc team ...` CLI 런타임을 호출하는 스킬 단축 경로입니다.
 - `swarm N agents` 구문은 에이전트 수 추출을 위해 여전히 인식되지만, v4.1.7+에서 런타임은 Team 기반입니다.
 
 ---
