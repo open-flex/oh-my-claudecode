@@ -34,7 +34,7 @@ function writeWorkerRegistry(workers: McpWorkerMember[]): void {
 }
 
 function writeTask(task: TaskFile): void {
-  atomicWriteJson(join(TASKS_DIR, `${task.id}.json`), task);
+  atomicWriteJson(join(TASKS_DIR, `task-${task.id}.json`), task);
 }
 
 function writeHeartbeatFile(data: HeartbeatData): void {

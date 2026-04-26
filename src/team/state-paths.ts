@@ -152,21 +152,3 @@ export function getTaskStoragePath(cwd: string, teamName: string, taskId?: strin
   }
   return join(cwd, TeamPaths.tasks(teamName));
 }
-
-/**
- * Legacy task storage path builder (deprecated).
- *
- * Old location: ~/.claude/tasks/{teamName}/{taskId}.json
- *
- * Used only by the compatibility shim in task-file-ops.ts to check
- * for data written by older versions during reads. New code must not
- * write to this path.
- *
- * @deprecated Use getTaskStoragePath instead.
- */
-export function getLegacyTaskStoragePath(claudeConfigDir: string, teamName: string, taskId?: string): string {
-  if (taskId !== undefined) {
-    return join(claudeConfigDir, 'tasks', teamName, `${taskId}.json`);
-  }
-  return join(claudeConfigDir, 'tasks', teamName);
-}

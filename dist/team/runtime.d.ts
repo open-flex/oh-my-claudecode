@@ -1,102 +1,159 @@
-import type { CliAgentType } from './model-contract.js';
-export interface TeamConfig {
-    teamName: string;
-    workerCount: number;
-    agentTypes: CliAgentType[];
-    tasks: Array<{
-        subject: string;
-        description: string;
-    }>;
-    cwd: string;
-    newWindow?: boolean;
-    tmuxSession?: string;
-    leaderPaneId?: string;
-    tmuxOwnsWindow?: boolean;
-}
-export interface ActiveWorkerState {
-    paneId: string;
-    taskId: string;
-    spawnedAt: number;
-}
+/**
+ * Event-driven team runtime.
+ *
+ * NO done.json polling. Completion is detected via:
+ * - CLI API lifecycle transitions (claim-task, transition-task-status)
+ * - Event-driven monitor snapshots
+ * - Worker heartbeat/status files
+ *
+ * Preserves: sentinel gate, circuit breaker, failure sidecars.
+ * Removes: done.json watchdog loop, sleep-based polling.
+ *
+ * Architecture mirrors runtime.ts: startTeam, monitorTeam, shutdownTeam,
+ * assignTask, resumeTeam as discrete operations driven by the caller.
+ */
+import type { TeamConfig, TeamTask, WorkerStatus, WorkerHeartbeat } from './types.js';
+import type { TeamPhase } from './phase-controller.js';
+import type { PluginConfig } from '../shared/types.js';
+import { type CliWorkerOutputPayload } from './cli-worker-contract.js';
 export interface TeamRuntime {
     teamName: string;
+    sanitizedName: string;
     sessionName: string;
-    leaderPaneId: string;
-    ownsWindow?: boolean;
     config: TeamConfig;
-    workerNames: string[];
-    workerPaneIds: string[];
-    activeWorkers: Map<string, ActiveWorkerState>;
     cwd: string;
-    /** Preflight-validated absolute binary paths, keyed by agent type */
-    resolvedBinaryPaths?: Partial<Record<CliAgentType, string>>;
-    stopWatchdog?: () => void;
-}
-export interface WorkerStatus {
-    workerName: string;
-    alive: boolean;
-    paneId: string;
-    currentTaskId?: string;
-    lastHeartbeat?: string;
-    stalled: boolean;
+    ownsWindow: boolean;
 }
 export interface TeamSnapshot {
     teamName: string;
-    phase: string;
-    workers: WorkerStatus[];
-    taskCounts: {
+    phase: TeamPhase;
+    workers: Array<{
+        name: string;
+        alive: boolean;
+        status: WorkerStatus;
+        heartbeat: WorkerHeartbeat | null;
+        assignedTasks: string[];
+        turnsWithoutProgress: number;
+    }>;
+    tasks: {
+        total: number;
         pending: number;
-        inProgress: number;
+        blocked: number;
+        in_progress: number;
         completed: number;
         failed: number;
+        items: TeamTask[];
     };
+    allTasksTerminal: boolean;
     deadWorkers: string[];
-    monitorPerformance: {
-        listTasksMs: number;
-        workerScanMs: number;
-        totalMs: number;
+    nonReportingWorkers: string[];
+    recommendations: string[];
+    performance: {
+        list_tasks_ms: number;
+        worker_scan_ms: number;
+        total_ms: number;
+        updated_at: string;
     };
 }
-export interface WatchdogCompletionEvent {
-    workerName: string;
-    taskId: string;
-    status: 'completed' | 'failed';
-    summary: string;
+export interface ShutdownOptions {
+    force?: boolean;
+    ralph?: boolean;
+    timeoutMs?: number;
 }
-export declare function allTasksTerminal(runtime: TeamRuntime): Promise<boolean>;
+export interface StartTeamConfig {
+    teamName: string;
+    workerCount: number;
+    agentTypes: string[];
+    tasks: Array<{
+        subject: string;
+        description: string;
+        owner?: string;
+        blocked_by?: string[];
+        role?: string;
+    }>;
+    cwd: string;
+    newWindow?: boolean;
+    workerRoles?: string[];
+    roleName?: string;
+    rolePrompt?: string;
+    /**
+     * Optional pre-loaded plugin config. When omitted, `loadConfig()` is called
+     * at startup. Exposed so callers (tests, bridges) can inject a config.
+     * The resolved routing snapshot derived from this config is persisted to
+     * `TeamConfig.resolved_routing` and is IMMUTABLE for the team's lifetime —
+     * subsequent edits to the on-disk config do NOT affect an already-started
+     * team (stickiness guarantee per plan AC-10 / R11).
+     */
+    pluginConfig?: PluginConfig;
+}
 /**
- * Start a new team: create tmux session, spawn workers, wait for ready.
+ * Start a team with the default event-driven runtime.
+ * Creates state directories, writes config + task files, spawns workers via
+ * tmux split-panes, and writes CLI API inbox instructions. NO done.json.
+ * NO watchdog polling — the leader drives monitoring via monitorTeam().
  */
-export declare function startTeam(config: TeamConfig): Promise<TeamRuntime>;
+export declare function startTeam(config: StartTeamConfig): Promise<TeamRuntime>;
+export declare function writeWatchdogFailedMarker(teamName: string, cwd: string, reason: string): Promise<void>;
 /**
- * Monitor team: poll worker health, detect stalls, return snapshot.
+ * Circuit breaker context for tracking consecutive monitor failures.
+ * The caller (runtime-cli default loop) should call recordSuccess on each
+ * successful monitor cycle and recordFailure on each error. When the
+ * threshold is reached, the breaker trips and writes watchdog-failed.json.
  */
-export declare function monitorTeam(teamName: string, cwd: string, workerPaneIds: string[]): Promise<TeamSnapshot>;
+export declare class CircuitBreaker {
+    private readonly teamName;
+    private readonly cwd;
+    private readonly threshold;
+    private consecutiveFailures;
+    private tripped;
+    constructor(teamName: string, cwd: string, threshold?: number);
+    recordSuccess(): void;
+    recordFailure(reason: string): Promise<boolean>;
+    isTripped(): boolean;
+}
 /**
- * Runtime-owned worker watchdog/orchestrator loop.
- * Handles done.json completion, dead pane failures, and next-task spawning.
+ * Requeue tasks from dead workers by writing failure sidecars and resetting
+ * task status back to pending so they can be claimed by other workers.
  */
-export declare function watchdogCliWorkers(runtime: TeamRuntime, intervalMs: number): () => void;
+export declare function requeueDeadWorkerTasks(teamName: string, deadWorkerNames: string[], cwd: string): Promise<string[]>;
+export type CliWorkerVerdictStatus = 'completed' | 'failed' | 'file_missing' | 'parse_failed' | 'no_in_progress_task' | 'already_terminal' | 'skipped';
+export interface CliWorkerVerdictResult {
+    workerName: string;
+    taskId: string | null;
+    status: CliWorkerVerdictStatus;
+    verdict?: CliWorkerOutputPayload['verdict'];
+    reason?: string;
+}
 /**
- * Spawn a worker pane for an explicit task assignment.
+ * Post-exit handler for CLI workers that emitted a structured verdict
+ * (AC-7). Scans workers whose panes have exited and whose WorkerInfo
+ * carries `output_file`. For each:
+ *   - Reads + validates the JSON payload via `parseCliWorkerVerdict`.
+ *   - Locates the worker's in_progress task and writes a terminal status
+ *     (completed for `approve`, failed for `revise`/`reject`) plus verdict
+ *     metadata directly to the task file — the worker process is gone and
+ *     cannot re-enter `transitionTaskStatus` with its claim token.
+ *   - Renames `verdict.json` to `verdict.processed.json` so a subsequent
+ *     monitor cycle does not reprocess it.
+ *   - Emits a team event describing the outcome.
+ * On parse failure, emits a warning event and leaves the task untouched
+ * for human review (per plan AC-7).
  */
-export declare function spawnWorkerForTask(runtime: TeamRuntime, workerNameValue: string, taskIndex: number): Promise<string>;
+export declare function processCliWorkerVerdicts(teamName: string, cwd: string): Promise<CliWorkerVerdictResult[]>;
 /**
- * Kill a single worker pane and update runtime state.
+ * Take a single monitor snapshot of team state.
+ * Caller drives the loop (e.g., runtime-cli poll interval or event trigger).
  */
-export declare function killWorkerPane(runtime: TeamRuntime, workerNameValue: string, paneId: string): Promise<void>;
+export declare function monitorTeam(teamName: string, cwd: string): Promise<TeamSnapshot | null>;
 /**
- * Assign a task to a specific worker via inbox + tmux trigger.
+ * Graceful team shutdown:
+ * 1. Shutdown gate check (unless force)
+ * 2. Send shutdown request to all workers via inbox
+ * 3. Wait for ack or timeout
+ * 4. Force kill remaining tmux panes
+ * 5. Clean up state
  */
-export declare function assignTask(teamName: string, taskId: string, targetWorkerName: string, paneId: string, sessionName: string, cwd: string): Promise<void>;
-/**
- * Gracefully shut down all workers and clean up.
- */
-export declare function shutdownTeam(teamName: string, sessionName: string, cwd: string, timeoutMs?: number, workerPaneIds?: string[], leaderPaneId?: string, ownsWindow?: boolean): Promise<void>;
-/**
- * Resume an existing team from persisted state.
- * Reconstructs activeWorkers by scanning task files for in_progress tasks
- * so the watchdog loop can continue processing without stalling.
- */
+export declare function shutdownTeam(teamName: string, cwd: string, options?: ShutdownOptions): Promise<void>;
 export declare function resumeTeam(teamName: string, cwd: string): Promise<TeamRuntime | null>;
+export declare function findActiveTeams(cwd: string): Promise<string[]>;
 //# sourceMappingURL=runtime.d.ts.map

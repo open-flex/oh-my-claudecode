@@ -20,7 +20,6 @@ const teamCleanupMocks = vi.hoisted(() => ({
     teamReadManifest: vi.fn(async () => null),
     teamReadConfig: vi.fn(async () => null),
     teamCleanup: vi.fn(async () => undefined),
-    shutdownTeamV2: vi.fn(async () => undefined),
     shutdownTeam: vi.fn(async () => undefined),
 }));
 vi.mock('../../../team/team-ops.js', async (_importOriginal) => {
@@ -30,13 +29,6 @@ vi.mock('../../../team/team-ops.js', async (_importOriginal) => {
         teamReadManifest: teamCleanupMocks.teamReadManifest,
         teamReadConfig: teamCleanupMocks.teamReadConfig,
         teamCleanup: teamCleanupMocks.teamCleanup,
-    };
-});
-vi.mock('../../../team/runtime-v2.js', async (_importOriginal) => {
-    const actual = await vi.importActual('../../../team/runtime-v2.js');
-    return {
-        ...actual,
-        shutdownTeamV2: teamCleanupMocks.shutdownTeamV2,
     };
 });
 vi.mock('../../../team/runtime.js', async (_importOriginal) => {
@@ -68,15 +60,13 @@ describe('processSessionEnd team cleanup (#1632)', () => {
         teamCleanupMocks.teamReadManifest.mockReset();
         teamCleanupMocks.teamReadConfig.mockReset();
         teamCleanupMocks.teamCleanup.mockReset();
-        teamCleanupMocks.shutdownTeamV2.mockReset();
         teamCleanupMocks.shutdownTeam.mockReset();
         teamCleanupMocks.teamReadManifest.mockResolvedValue(null);
         teamCleanupMocks.teamReadConfig.mockResolvedValue(null);
         teamCleanupMocks.teamCleanup.mockResolvedValue(undefined);
-        teamCleanupMocks.shutdownTeamV2.mockResolvedValue(undefined);
         teamCleanupMocks.shutdownTeam.mockResolvedValue(undefined);
     });
-    it('force-shuts down a session-owned runtime-v2 team from session team state', async () => {
+    it('force-shuts down a session-owned team from session team state', async () => {
         const sessionId = 'pid-1632-v2';
         const teamSessionDir = path.join(tmpDir, '.omc', 'state', 'sessions', sessionId);
         fs.mkdirSync(teamSessionDir, { recursive: true });
@@ -92,30 +82,7 @@ describe('processSessionEnd team cleanup (#1632)', () => {
             hook_event_name: 'SessionEnd',
             reason: 'clear',
         });
-        expect(teamCleanupMocks.shutdownTeamV2).toHaveBeenCalledWith('delivery-team', tmpDir, { force: true, timeoutMs: 0 });
-        expect(teamCleanupMocks.shutdownTeam).not.toHaveBeenCalled();
-    });
-    it('force-shuts down a legacy runtime team referenced by the ending session', async () => {
-        const sessionId = 'pid-1632-legacy';
-        const teamSessionDir = path.join(tmpDir, '.omc', 'state', 'sessions', sessionId);
-        fs.mkdirSync(teamSessionDir, { recursive: true });
-        fs.writeFileSync(path.join(teamSessionDir, 'team-state.json'), JSON.stringify({ active: true, session_id: sessionId, team_name: 'legacy-team', current_phase: 'team-exec' }), 'utf-8');
-        teamCleanupMocks.teamReadConfig.mockResolvedValue({
-            agentTypes: ['codex'],
-            tmuxSession: 'legacy-team:0',
-            leaderPaneId: '%0',
-            tmuxOwnsWindow: false,
-        });
-        await processSessionEnd({
-            session_id: sessionId,
-            transcript_path: transcriptPath,
-            cwd: tmpDir,
-            permission_mode: 'default',
-            hook_event_name: 'SessionEnd',
-            reason: 'clear',
-        });
-        expect(teamCleanupMocks.shutdownTeam).toHaveBeenCalledWith('legacy-team', 'legacy-team:0', tmpDir, 0, undefined, '%0', false);
-        expect(teamCleanupMocks.shutdownTeamV2).not.toHaveBeenCalled();
+        expect(teamCleanupMocks.shutdownTeam).toHaveBeenCalledWith('delivery-team', tmpDir, { force: true, timeoutMs: 0 });
     });
     it('only cleans up manifests owned by the ending session', async () => {
         const sessionId = 'pid-1632-owner';
@@ -143,8 +110,8 @@ describe('processSessionEnd team cleanup (#1632)', () => {
             hook_event_name: 'SessionEnd',
             reason: 'clear',
         });
-        expect(teamCleanupMocks.shutdownTeamV2).toHaveBeenCalledTimes(1);
-        expect(teamCleanupMocks.shutdownTeamV2).toHaveBeenCalledWith('owned-team', tmpDir, { force: true, timeoutMs: 0 });
+        expect(teamCleanupMocks.shutdownTeam).toHaveBeenCalledTimes(1);
+        expect(teamCleanupMocks.shutdownTeam).toHaveBeenCalledWith('owned-team', tmpDir, { force: true, timeoutMs: 0 });
     });
 });
 //# sourceMappingURL=team-cleanup.test.js.map

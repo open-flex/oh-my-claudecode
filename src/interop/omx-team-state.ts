@@ -6,7 +6,7 @@
  *
  * Data layout: .omx/state/team/{name}/
  *   config.json              — TeamConfig
- *   manifest.v2.json         — TeamManifestV2
+ *   manifest.json            — TeamManifest
  *   mailbox/{worker}.json    — TeamMailbox
  *   tasks/task-{id}.json     — TeamTask
  *   events/events.ndjson     — TeamEvent (append-only)
@@ -95,7 +95,7 @@ export interface OmxTeamEvent {
   created_at: string;
 }
 
-export interface OmxTeamManifestV2 {
+export interface OmxTeamManifest {
   schema_version: 2;
   name: string;
   task: string;
@@ -120,7 +120,7 @@ const OmxWorkerInfoSchema = z.object({
   pane_id: z.string().optional(),
 });
 
-const OmxTeamManifestV2Schema = z.object({
+const OmxTeamManifestSchema = z.object({
   schema_version: z.literal(2),
   name: z.string(),
   task: z.string(),
@@ -196,18 +196,18 @@ export async function listOmxTeams(cwd: string): Promise<string[]> {
 // ============================================================================
 
 /**
- * Read team config (tries manifest.v2.json first, falls back to config.json)
+ * Read team config (tries manifest.json first, falls back to config.json)
  */
 export async function readOmxTeamConfig(teamName: string, cwd: string): Promise<OmxTeamConfig | null> {
   const root = teamDir(teamName, cwd);
   if (!existsSync(root)) return null;
 
-  // Try manifest.v2.json first
-  const manifestPath = join(root, 'manifest.v2.json');
+  // Try manifest.json first
+  const manifestPath = join(root, 'manifest.json');
   if (existsSync(manifestPath)) {
     try {
       const raw = await readFile(manifestPath, 'utf8');
-      const manifestResult = OmxTeamManifestV2Schema.safeParse(JSON.parse(raw));
+      const manifestResult = OmxTeamManifestSchema.safeParse(JSON.parse(raw));
       if (manifestResult.success) {
         const manifest = manifestResult.data;
         return {

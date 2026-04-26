@@ -1,24 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const runtimeV2Mocks = vi.hoisted(() => ({
-  isRuntimeV2Enabled: vi.fn(() => true),
-  startTeamV2: vi.fn(),
-  monitorTeamV2: vi.fn(),
-  findActiveTeamsV2: vi.fn(async () => []),
+const runtimeMocks = vi.hoisted(() => ({
+  startTeam: vi.fn(),
+  monitorTeam: vi.fn(),
+  findActiveTeams: vi.fn(async () => []),
 }));
 
 const agentUtilsMocks = vi.hoisted(() => ({
   loadAgentPrompt: vi.fn((role: string) => `prompt:${role}`),
 }));
 
-vi.mock('../../../team/runtime-v2.js', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../team/runtime-v2.js')>();
+vi.mock('../../../team/runtime.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../team/runtime.js')>();
   return {
     ...actual,
-    isRuntimeV2Enabled: runtimeV2Mocks.isRuntimeV2Enabled,
-    startTeamV2: runtimeV2Mocks.startTeamV2,
-    monitorTeamV2: runtimeV2Mocks.monitorTeamV2,
-    findActiveTeamsV2: runtimeV2Mocks.findActiveTeamsV2,
+    startTeam: runtimeMocks.startTeam,
+    monitorTeam: runtimeMocks.monitorTeam,
+    findActiveTeams: runtimeMocks.findActiveTeams,
   };
 });
 
@@ -31,14 +29,13 @@ describe('teamCommand role-only shorthand', () => {
   let logSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    runtimeV2Mocks.isRuntimeV2Enabled.mockReturnValue(true);
-    runtimeV2Mocks.findActiveTeamsV2.mockResolvedValue([]);
-    runtimeV2Mocks.startTeamV2.mockResolvedValue({
+    runtimeMocks.findActiveTeams.mockResolvedValue([]);
+    runtimeMocks.startTeam.mockResolvedValue({
       teamName: 'fix-the-bug',
       sessionName: 'team-session',
       config: { worker_count: 2 },
     });
-    runtimeV2Mocks.monitorTeamV2.mockResolvedValue({
+    runtimeMocks.monitorTeam.mockResolvedValue({
       tasks: { total: 2, pending: 0, in_progress: 2, completed: 0, failed: 0 },
     });
     agentUtilsMocks.loadAgentPrompt.mockImplementation((role: string) => `prompt:${role}`);
@@ -57,7 +54,7 @@ describe('teamCommand role-only shorthand', () => {
     await teamCommand(['2:executor', 'fix the bug']);
 
     expect(agentUtilsMocks.loadAgentPrompt).toHaveBeenCalledWith('executor');
-    expect(runtimeV2Mocks.startTeamV2).toHaveBeenCalledWith(expect.objectContaining({
+    expect(runtimeMocks.startTeam).toHaveBeenCalledWith(expect.objectContaining({
       workerCount: 2,
       agentTypes: ['claude', 'claude'],
       workerRoles: ['executor', 'executor'],

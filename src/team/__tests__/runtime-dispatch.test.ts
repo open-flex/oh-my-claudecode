@@ -59,7 +59,7 @@ vi.mock('../tmux-session.js', () => ({
   applyMainVerticalLayout: mocks.applyMainVerticalLayout,
 }));
 
-describe('runtime v2 startup inbox dispatch', () => {
+describe('runtime startup inbox dispatch', () => {
   let cwd: string;
   const originalCwd = process.cwd();
 
@@ -125,10 +125,10 @@ describe('runtime v2 startup inbox dispatch', () => {
   });
 
   it('writes durable inbox dispatch evidence when startup worker notification succeeds', async () => {
-    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-v2-dispatch-'));
-    const { startTeamV2 } = await import('../runtime-v2.js');
+    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-dispatch-'));
+    const { startTeam } = await import('../runtime.js');
 
-    const runtime = await startTeamV2({
+    const runtime = await startTeam({
       teamName: 'dispatch-team',
       workerCount: 1,
       agentTypes: ['claude'],
@@ -173,10 +173,10 @@ describe('runtime v2 startup inbox dispatch', () => {
 
 
   it('uses owner-aware startup allocation when task owners are provided', async () => {
-    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-v2-owner-startup-'));
-    const { startTeamV2 } = await import('../runtime-v2.js');
+    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-owner-startup-'));
+    const { startTeam } = await import('../runtime.js');
 
-    const runtime = await startTeamV2({
+    const runtime = await startTeam({
       teamName: 'dispatch-team',
       workerCount: 2,
       agentTypes: ['claude', 'claude'],
@@ -199,10 +199,10 @@ describe('runtime v2 startup inbox dispatch', () => {
 
 
   it('preserves explicit worker roles in runtime config during startup fanout', async () => {
-    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-v2-worker-roles-'));
-    const { startTeamV2 } = await import('../runtime-v2.js');
+    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-worker-roles-'));
+    const { startTeam } = await import('../runtime.js');
 
-    const runtime = await startTeamV2({
+    const runtime = await startTeam({
       teamName: 'dispatch-team',
       workerCount: 2,
       agentTypes: ['codex', 'gemini'],
@@ -222,7 +222,7 @@ describe('runtime v2 startup inbox dispatch', () => {
   });
 
   it('routes inferred review work through alias-keyed resolved snapshot entries', async () => {
-    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-v2-alias-routing-'));
+    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-alias-routing-'));
     await mkdir(join(cwd, '.claude'), { recursive: true });
     await writeFile(
       join(cwd, '.claude', 'omc.jsonc'),
@@ -237,9 +237,9 @@ describe('runtime v2 startup inbox dispatch', () => {
     );
     process.chdir(cwd);
 
-    const { startTeamV2 } = await import('../runtime-v2.js');
+    const { startTeam } = await import('../runtime.js');
 
-    const runtime = await startTeamV2({
+    const runtime = await startTeam({
       teamName: 'dispatch-team',
       workerCount: 1,
       agentTypes: ['claude'],
@@ -252,10 +252,10 @@ describe('runtime v2 startup inbox dispatch', () => {
   });
 
   it('passes through dedicated-window startup requests', async () => {
-    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-v2-new-window-'));
-    const { startTeamV2 } = await import('../runtime-v2.js');
+    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-new-window-'));
+    const { startTeam } = await import('../runtime.js');
 
-    await startTeamV2({
+    await startTeam({
       teamName: 'dispatch-team',
       workerCount: 1,
       agentTypes: ['claude'],
@@ -269,11 +269,11 @@ describe('runtime v2 startup inbox dispatch', () => {
 
 
   it('does not auto-kill a worker pane when startup readiness fails', async () => {
-    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-v2-no-autokill-ready-'));
+    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-no-autokill-ready-'));
     mocks.waitForPaneReady.mockResolvedValue(false);
-    const { startTeamV2 } = await import('../runtime-v2.js');
+    const { startTeam } = await import('../runtime.js');
 
-    const runtime = await startTeamV2({
+    const runtime = await startTeam({
       teamName: 'dispatch-team',
       workerCount: 1,
       agentTypes: ['claude'],
@@ -287,11 +287,11 @@ describe('runtime v2 startup inbox dispatch', () => {
   });
 
   it('does not auto-kill a worker pane when startup notification fails', async () => {
-    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-v2-no-autokill-notify-'));
+    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-no-autokill-notify-'));
     mocks.sendToWorker.mockResolvedValue(false);
-    const { startTeamV2 } = await import('../runtime-v2.js');
+    const { startTeam } = await import('../runtime.js');
 
-    const runtime = await startTeamV2({
+    const runtime = await startTeam({
       teamName: 'dispatch-team',
       workerCount: 1,
       agentTypes: ['claude'],
@@ -310,10 +310,10 @@ describe('runtime v2 startup inbox dispatch', () => {
   });
 
   it('requires Claude startup evidence without resending the startup inbox', async () => {
-    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-v2-claude-evidence-missing-'));
-    const { startTeamV2 } = await import('../runtime-v2.js');
+    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-claude-evidence-missing-'));
+    const { startTeam } = await import('../runtime.js');
 
-    const runtime = await startTeamV2({
+    const runtime = await startTeam({
       teamName: 'dispatch-team',
       workerCount: 1,
       agentTypes: ['claude'],
@@ -331,7 +331,7 @@ describe('runtime v2 startup inbox dispatch', () => {
   });
 
   it('does not treat ACK-only mailbox replies as Claude startup evidence or resend the startup inbox', async () => {
-    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-v2-claude-evidence-ack-'));
+    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-claude-evidence-ack-'));
 
     mocks.sendToWorker.mockImplementation(async () => {
       const mailboxDir = join(cwd, '.omc', 'state', 'team', 'dispatch-team', 'mailbox');
@@ -349,9 +349,9 @@ describe('runtime v2 startup inbox dispatch', () => {
       return true;
     });
 
-    const { startTeamV2 } = await import('../runtime-v2.js');
+    const { startTeam } = await import('../runtime.js');
 
-    const runtime = await startTeamV2({
+    const runtime = await startTeam({
       teamName: 'dispatch-team',
       workerCount: 1,
       agentTypes: ['claude'],
@@ -364,7 +364,7 @@ describe('runtime v2 startup inbox dispatch', () => {
   });
 
   it('accepts Claude startup once the worker claims the task', async () => {
-    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-v2-claude-evidence-claim-'));
+    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-claude-evidence-claim-'));
 
     mocks.sendToWorker.mockImplementation(async () => {
       const taskDir = join(cwd, '.omc', 'state', 'team', 'dispatch-team', 'tasks');
@@ -378,9 +378,9 @@ describe('runtime v2 startup inbox dispatch', () => {
       return true;
     });
 
-    const { startTeamV2 } = await import('../runtime-v2.js');
+    const { startTeam } = await import('../runtime.js');
 
-    const runtime = await startTeamV2({
+    const runtime = await startTeam({
       teamName: 'dispatch-team',
       workerCount: 1,
       agentTypes: ['claude'],
@@ -393,7 +393,7 @@ describe('runtime v2 startup inbox dispatch', () => {
   });
 
   it('accepts Claude startup once worker status shows task progress', async () => {
-    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-v2-claude-evidence-status-'));
+    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-claude-evidence-status-'));
 
     mocks.sendToWorker.mockImplementation(async () => {
       const workerDir = join(cwd, '.omc', 'state', 'team', 'dispatch-team', 'workers', 'worker-1');
@@ -406,9 +406,9 @@ describe('runtime v2 startup inbox dispatch', () => {
       return true;
     });
 
-    const { startTeamV2 } = await import('../runtime-v2.js');
+    const { startTeam } = await import('../runtime.js');
 
-    const runtime = await startTeamV2({
+    const runtime = await startTeam({
       teamName: 'dispatch-team',
       workerCount: 1,
       agentTypes: ['claude'],
@@ -421,19 +421,13 @@ describe('runtime v2 startup inbox dispatch', () => {
   });
 
   it('keeps codex prompt-mode launch args to a short inbox pointer and waits for claim evidence', async () => {
-    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-v2-codex-prompt-'));
+    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-codex-prompt-'));
 
     modelContractMocks.isPromptModeAgent.mockImplementation((agentType?: string) => agentType === 'codex');
     mocks.spawnWorkerInPane.mockImplementation(async () => {
       const taskDir = join(cwd, '.omc', 'state', 'team', 'dispatch-team', 'tasks');
-      const canonicalTaskPath = join(taskDir, 'task-1.json');
-      const legacyTaskPath = join(taskDir, '1.json');
-      const taskPath = await readFile(canonicalTaskPath, 'utf-8')
-        .then(() => canonicalTaskPath)
-        .catch(async () => {
-          await readFile(legacyTaskPath, 'utf-8');
-          return legacyTaskPath;
-        });
+      const taskPath = join(taskDir, 'task-1.json');
+      await readFile(taskPath, 'utf-8');
       const existing = JSON.parse(await readFile(taskPath, 'utf-8'));
       await writeFile(taskPath, JSON.stringify({
         ...existing,
@@ -442,9 +436,9 @@ describe('runtime v2 startup inbox dispatch', () => {
       }, null, 2), 'utf-8');
     });
 
-    const { startTeamV2 } = await import('../runtime-v2.js');
+    const { startTeam } = await import('../runtime.js');
 
-    const runtime = await startTeamV2({
+    const runtime = await startTeam({
       teamName: 'dispatch-team',
       workerCount: 1,
       agentTypes: ['codex'],

@@ -28,8 +28,8 @@ beforeEach(() => {
     const base = join(tmpdir(), `omc-auto-cleanup-${Date.now()}`);
     tmpClaudeDir = join(base, 'claude');
     TEAMS_DIR = join(tmpClaudeDir, 'teams', TEST_TEAM);
-    TASKS_DIR = join(tmpClaudeDir, 'tasks', TEST_TEAM);
     WORK_DIR = join(base, 'work');
+    TASKS_DIR = join(WORK_DIR, '.omc', 'state', 'team', TEST_TEAM, 'tasks');
     originalClaudeConfigDir = process.env.CLAUDE_CONFIG_DIR;
     process.env.CLAUDE_CONFIG_DIR = tmpClaudeDir;
     mkdirSync(join(TEAMS_DIR, 'outbox'), { recursive: true });
@@ -52,7 +52,7 @@ function writeWorkerRegistry(workers) {
     atomicWriteJson(registryPath, { teamName: TEST_TEAM, workers });
 }
 function writeTask(task) {
-    atomicWriteJson(join(TASKS_DIR, `${task.id}.json`), task);
+    atomicWriteJson(join(TASKS_DIR, `task-${task.id}.json`), task);
 }
 function makeWorker(name) {
     return {

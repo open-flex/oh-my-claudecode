@@ -33,7 +33,7 @@ vi.mock('../tmux-session.js', async (importOriginal) => {
   };
 });
 
-describe('monitorTeamV2 pane-based stall inference', () => {
+describe('monitorTeam pane-based stall inference', () => {
   let cwd: string;
 
   beforeEach(() => {
@@ -90,7 +90,7 @@ describe('monitorTeamV2 pane-based stall inference', () => {
       team_state_root: join(cwd, '.omc', 'state', 'team', 'demo-team'),
       workspace_mode: 'single',
     }, null, 2), 'utf-8');
-    await writeFile(join(teamRoot, 'tasks', '1.json'), JSON.stringify({
+    await writeFile(join(teamRoot, 'tasks', 'task-1.json'), JSON.stringify({
       id: '1',
       subject: 'Demo task',
       description: 'Investigate a worker stall',
@@ -101,11 +101,11 @@ describe('monitorTeamV2 pane-based stall inference', () => {
   }
 
   it('flags pane-idle workers with assigned work but no work-start evidence', async () => {
-    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-v2-monitor-'));
+    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-monitor-'));
     await writeConfigAndTask('pending');
 
-    const { monitorTeamV2 } = await import('../runtime-v2.js');
-    const snapshot = await monitorTeamV2('demo-team', cwd);
+    const { monitorTeam } = await import('../runtime.js');
+    const snapshot = await monitorTeam('demo-team', cwd);
 
     expect(snapshot?.nonReportingWorkers).toContain('worker-1');
     expect(snapshot?.recommendations).toContain(
@@ -114,10 +114,10 @@ describe('monitorTeamV2 pane-based stall inference', () => {
   });
 
   it('surfaces missing blocker task ids in monitor recommendations', async () => {
-    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-v2-monitor-missing-blocker-'));
+    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-monitor-missing-blocker-'));
     await writeConfigAndTask('pending');
     const teamRoot = join(cwd, '.omc', 'state', 'team', 'demo-team');
-    await writeFile(join(teamRoot, 'tasks', '1.json'), JSON.stringify({
+    await writeFile(join(teamRoot, 'tasks', 'task-1.json'), JSON.stringify({
       id: '1',
       subject: 'Blocked task',
       description: 'Depends on missing task 13',
@@ -128,8 +128,8 @@ describe('monitorTeamV2 pane-based stall inference', () => {
       created_at: new Date().toISOString(),
     }, null, 2), 'utf-8');
 
-    const { monitorTeamV2 } = await import('../runtime-v2.js');
-    const snapshot = await monitorTeamV2('demo-team', cwd);
+    const { monitorTeam } = await import('../runtime.js');
+    const snapshot = await monitorTeam('demo-team', cwd);
 
     expect(snapshot?.nonReportingWorkers).toContain('worker-1');
     expect(snapshot?.recommendations).toContain(
@@ -141,7 +141,7 @@ describe('monitorTeamV2 pane-based stall inference', () => {
   });
 
   it('does not flag a worker when pane evidence shows active work despite missing reports', async () => {
-    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-v2-monitor-active-'));
+    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-monitor-active-'));
     await writeConfigAndTask('in_progress');
     mocks.execFile.mockImplementation((_cmd: string, args: string[], cb: (err: Error | null, stdout: string, stderr: string) => void) => {
       if (args[0] === 'capture-pane') {
@@ -157,14 +157,14 @@ describe('monitorTeamV2 pane-based stall inference', () => {
       return { stdout: '', stderr: '' };
     });
 
-    const { monitorTeamV2 } = await import('../runtime-v2.js');
-    const snapshot = await monitorTeamV2('demo-team', cwd);
+    const { monitorTeam } = await import('../runtime.js');
+    const snapshot = await monitorTeam('demo-team', cwd);
 
     expect(snapshot?.nonReportingWorkers).toEqual([]);
   });
 
   it('does not flag a worker when pane evidence shows startup bootstrapping instead of idle readiness', async () => {
-    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-v2-monitor-bootstrap-'));
+    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-monitor-bootstrap-'));
     await writeConfigAndTask('pending');
     mocks.execFile.mockImplementation((_cmd: string, args: string[], cb: (err: Error | null, stdout: string, stderr: string) => void) => {
       if (args[0] === 'capture-pane') {
@@ -180,14 +180,14 @@ describe('monitorTeamV2 pane-based stall inference', () => {
       return { stdout: '', stderr: '' };
     });
 
-    const { monitorTeamV2 } = await import('../runtime-v2.js');
-    const snapshot = await monitorTeamV2('demo-team', cwd);
+    const { monitorTeam } = await import('../runtime.js');
+    const snapshot = await monitorTeam('demo-team', cwd);
 
     expect(snapshot?.nonReportingWorkers).toEqual([]);
   });
 
   it('deduplicates duplicate worker rows from persisted config during monitoring', async () => {
-    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-v2-monitor-dedup-'));
+    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-monitor-dedup-'));
     await writeConfigAndTask('pending');
     const root = join(cwd, '.omc', 'state', 'team', 'demo-team');
     await writeFile(join(root, 'config.json'), JSON.stringify({
@@ -212,8 +212,8 @@ describe('monitorTeamV2 pane-based stall inference', () => {
       workspace_mode: 'single',
     }, null, 2), 'utf-8');
 
-    const { monitorTeamV2 } = await import('../runtime-v2.js');
-    const snapshot = await monitorTeamV2('demo-team', cwd);
+    const { monitorTeam } = await import('../runtime.js');
+    const snapshot = await monitorTeam('demo-team', cwd);
 
     expect(snapshot?.workers).toHaveLength(1);
     expect(snapshot?.workers[0]?.name).toBe('worker-1');

@@ -5,7 +5,7 @@
  * against previous snapshot, emits events, delivers mailbox messages,
  * and persists the new snapshot for the next cycle.
  *
- * NO polling watchdog. The caller (runtime-v2 or runtime-cli) drives
+ * NO polling watchdog. The caller (runtime or runtime-cli) drives
  * the monitor loop.
  */
 import { existsSync } from 'fs';
@@ -209,7 +209,7 @@ export async function listTasksFromFiles(teamName, cwd) {
     const entries = await readdir(tasksDir);
     const tasks = [];
     for (const entry of entries) {
-        const match = /^(?:task-)?(\d+)\.json$/.exec(entry);
+        const match = /^task-(\d+)\.json$/.exec(entry);
         if (!match)
             continue;
         const task = await readJsonSafe(absPath(cwd, `${TeamPaths.tasks(teamName)}/${entry}`));

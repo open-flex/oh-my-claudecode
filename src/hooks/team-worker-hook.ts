@@ -199,7 +199,7 @@ async function readTeamWorkersForIdleCheck(
   stateDir: string,
   teamName: string,
 ): Promise<{ workers: Array<{ name: string; index?: number }>; tmuxSession: string; leaderPaneId: string } | null> {
-  const manifestPath = join(stateDir, 'team', teamName, 'manifest.v2.json');
+  const manifestPath = join(stateDir, 'team', teamName, 'manifest.json');
   const configPath = join(stateDir, 'team', teamName, 'config.json');
   const srcPath = existsSync(manifestPath) ? manifestPath : existsSync(configPath) ? configPath : null;
   if (!srcPath) return null;

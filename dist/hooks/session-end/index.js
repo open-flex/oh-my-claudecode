@@ -511,7 +511,6 @@ async function cleanupSessionOwnedTeams(directory, sessionId) {
         return { attempted, cleaned, failed };
     }
     const { teamReadConfig, teamCleanup } = await import('../../team/team-ops.js');
-    const { shutdownTeamV2 } = await import('../../team/runtime-v2.js');
     const { shutdownTeam } = await import('../../team/runtime.js');
     for (const teamName of teamNames) {
         attempted.push(teamName);
@@ -523,19 +522,7 @@ async function cleanupSessionOwnedTeams(directory, sessionId) {
                 continue;
             }
             if (Array.isArray(config.workers)) {
-                await shutdownTeamV2(teamName, directory, { force: true, timeoutMs: 0 });
-                cleaned.push(teamName);
-                continue;
-            }
-            if (Array.isArray(config.agentTypes)) {
-                const legacyConfig = config;
-                const sessionName = typeof legacyConfig.tmuxSession === 'string' && legacyConfig.tmuxSession.trim() !== ''
-                    ? legacyConfig.tmuxSession.trim()
-                    : `omc-team-${teamName}`;
-                const leaderPaneId = typeof legacyConfig.leaderPaneId === 'string' && legacyConfig.leaderPaneId.trim() !== ''
-                    ? legacyConfig.leaderPaneId.trim()
-                    : undefined;
-                await shutdownTeam(teamName, sessionName, directory, 0, undefined, leaderPaneId, legacyConfig.tmuxOwnsWindow === true);
+                await shutdownTeam(teamName, directory, { force: true, timeoutMs: 0 });
                 cleaned.push(teamName);
                 continue;
             }

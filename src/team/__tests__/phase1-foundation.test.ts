@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, rm, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
-import type { TeamConfig, TeamManifestV2 } from '../types.js';
+import type { TeamConfig, TeamManifest } from '../types.js';
 import { executeTeamApiOperation } from '../api-interop.js';
 
 // Step 1.1: lifecycle_profile type compilation tests
@@ -27,22 +27,22 @@ describe('lifecycle_profile type field', () => {
     expect(config.lifecycle_profile).toBeUndefined();
   });
 
-  it('TeamManifestV2 accepts lifecycle_profile as optional field', () => {
-    const manifest: Partial<TeamManifestV2> = {
+  it('TeamManifest accepts lifecycle_profile as optional field', () => {
+    const manifest: Partial<TeamManifest> = {
       lifecycle_profile: 'default',
     };
     expect(manifest.lifecycle_profile).toBe('default');
   });
 
-  it('TeamManifestV2 accepts linked_ralph lifecycle_profile', () => {
-    const manifest: Partial<TeamManifestV2> = {
+  it('TeamManifest accepts linked_ralph lifecycle_profile', () => {
+    const manifest: Partial<TeamManifest> = {
       lifecycle_profile: 'linked_ralph',
     };
     expect(manifest.lifecycle_profile).toBe('linked_ralph');
   });
 
-  it('TeamManifestV2 allows lifecycle_profile to be undefined', () => {
-    const manifest: Partial<TeamManifestV2> = {};
+  it('TeamManifest allows lifecycle_profile to be undefined', () => {
+    const manifest: Partial<TeamManifest> = {};
     expect(manifest.lifecycle_profile).toBeUndefined();
   });
 });
@@ -110,7 +110,7 @@ describe('state root resolution priority: config > manifest > cwd-walk', () => {
     await mkdir(join(wrongRoot, 'mailbox'), { recursive: true });
 
     // Manifest points to wrong root
-    await writeFile(join(base, 'manifest.v2.json'), JSON.stringify({
+    await writeFile(join(base, 'manifest.json'), JSON.stringify({
       schema_version: 2,
       name: teamName,
       task: 'test',

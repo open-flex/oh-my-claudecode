@@ -35,7 +35,7 @@ vi.mock('../tmux-session.js', async (importOriginal) => {
   };
 });
 
-describe('runtime-v2 role routing — processCliWorkerVerdicts (AC-7)', () => {
+describe('runtime role routing — processCliWorkerVerdicts (AC-7)', () => {
   let cwd: string;
 
   beforeEach(() => {
@@ -153,7 +153,7 @@ describe('runtime-v2 role routing — processCliWorkerVerdicts (AC-7)', () => {
     cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-routing-approve-'));
     const { outputFile, taskPath } = await bootstrap({ verdict: 'approve' });
 
-    const { processCliWorkerVerdicts } = await import('../runtime-v2.js');
+    const { processCliWorkerVerdicts } = await import('../runtime.js');
     const results = await processCliWorkerVerdicts('role-routing-team', cwd);
 
     expect(results).toHaveLength(1);
@@ -177,7 +177,7 @@ describe('runtime-v2 role routing — processCliWorkerVerdicts (AC-7)', () => {
     cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-routing-revise-'));
     const { taskPath } = await bootstrap({ verdict: 'revise' });
 
-    const { processCliWorkerVerdicts } = await import('../runtime-v2.js');
+    const { processCliWorkerVerdicts } = await import('../runtime.js');
     const results = await processCliWorkerVerdicts('role-routing-team', cwd);
 
     expect(results[0].status).toBe('failed');
@@ -195,7 +195,7 @@ describe('runtime-v2 role routing — processCliWorkerVerdicts (AC-7)', () => {
     cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-routing-reject-'));
     const { taskPath } = await bootstrap({ verdict: 'reject' });
 
-    const { processCliWorkerVerdicts } = await import('../runtime-v2.js');
+    const { processCliWorkerVerdicts } = await import('../runtime.js');
     const results = await processCliWorkerVerdicts('role-routing-team', cwd);
 
     expect(results[0].status).toBe('failed');
@@ -210,7 +210,7 @@ describe('runtime-v2 role routing — processCliWorkerVerdicts (AC-7)', () => {
     cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-routing-alive-'));
     const { taskPath } = await bootstrap({ verdict: 'approve', paneAlive: true });
 
-    const { processCliWorkerVerdicts } = await import('../runtime-v2.js');
+    const { processCliWorkerVerdicts } = await import('../runtime.js');
     const results = await processCliWorkerVerdicts('role-routing-team', cwd);
 
     expect(results).toHaveLength(0);
@@ -222,7 +222,7 @@ describe('runtime-v2 role routing — processCliWorkerVerdicts (AC-7)', () => {
     cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-routing-missing-'));
     await bootstrap({ verdict: 'approve', omitVerdictFile: true });
 
-    const { processCliWorkerVerdicts } = await import('../runtime-v2.js');
+    const { processCliWorkerVerdicts } = await import('../runtime.js');
     const results = await processCliWorkerVerdicts('role-routing-team', cwd);
 
     expect(results).toHaveLength(1);
@@ -233,7 +233,7 @@ describe('runtime-v2 role routing — processCliWorkerVerdicts (AC-7)', () => {
     cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-routing-parse-'));
     await bootstrap({ verdict: 'approve', invalidVerdictJson: true });
 
-    const { processCliWorkerVerdicts } = await import('../runtime-v2.js');
+    const { processCliWorkerVerdicts } = await import('../runtime.js');
     const results = await processCliWorkerVerdicts('role-routing-team', cwd);
 
     expect(results).toHaveLength(1);
@@ -282,14 +282,14 @@ describe('runtime-v2 role routing — processCliWorkerVerdicts (AC-7)', () => {
       'utf-8',
     );
 
-    const { processCliWorkerVerdicts } = await import('../runtime-v2.js');
+    const { processCliWorkerVerdicts } = await import('../runtime.js');
     const results = await processCliWorkerVerdicts(teamName, cwd);
     expect(results).toEqual([]);
   });
 
   it('returns empty when team config is missing', async () => {
     cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-routing-noconfig-'));
-    const { processCliWorkerVerdicts } = await import('../runtime-v2.js');
+    const { processCliWorkerVerdicts } = await import('../runtime.js');
     const results = await processCliWorkerVerdicts('nonexistent-team', cwd);
     expect(results).toEqual([]);
   });

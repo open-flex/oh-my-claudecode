@@ -5,7 +5,7 @@
  * (codex or gemini), the worker is a one-shot process that cannot call
  * TaskUpdate directly. To surface a structured verdict back to the team
  * leader, the worker writes a JSON payload to a pre-agreed file path
- * before exit. The leader's worker-completion handler in runtime-v2 reads
+ * before exit. The leader's worker-completion handler in runtime reads
  * the file and calls TaskUpdate with verdict metadata.
  *
  * Applies to roles in CONTRACT_ROLES (critic, code-reviewer,

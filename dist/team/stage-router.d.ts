@@ -8,7 +8,7 @@
  *
  * Stickiness rule: the snapshot is IMMUTABLE for the team's lifetime.
  * Config edits mid-team-life do NOT change routing; user must create a new
- * team to pick up new routing. Enforced by runtime-v2 / scaling consumers.
+ * team to pick up new routing. Enforced by runtime / scaling consumers.
  */
 import type { CanonicalTeamRole, PluginConfig, RoleAssignment, TeamRoleAssignmentSpec } from '../shared/types.js';
 /**
@@ -38,7 +38,7 @@ export declare function resolveRoleAssignment(role: CanonicalTeamRole, cfg: Plug
  * Fallback is always a Claude worker with the same model + agent as primary,
  * used when the primary provider's CLI binary is missing at spawn time
  * (AC-8). Persisted to `TeamConfig.resolved_routing` at team creation by
- * `startTeamV2`; read (never re-resolved) by spawn / scaleUp / restart paths.
+ * `startTeam`; read (never re-resolved) by spawn / scaleUp / restart paths.
  */
 export declare function buildResolvedRoutingSnapshot(cfg: PluginConfig): Record<CanonicalTeamRole, {
     primary: RoleAssignment;

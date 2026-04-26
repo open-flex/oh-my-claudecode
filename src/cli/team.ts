@@ -144,7 +144,7 @@ function getTeamWorkerIdentityFromEnv(env: NodeJS.ProcessEnv = process.env): str
 async function assertTeamSpawnAllowed(cwd: string, env: NodeJS.ProcessEnv = process.env): Promise<void> {
   const workerIdentity = getTeamWorkerIdentityFromEnv(env);
   const { teamReadManifest } = await import('../team/team-ops.js');
-  const { findActiveTeamsV2 } = await import('../team/runtime-v2.js');
+  const { findActiveTeams } = await import('../team/runtime.js');
   const { DEFAULT_TEAM_GOVERNANCE, normalizeTeamGovernance } = await import('../team/governance.js');
 
   if (workerIdentity) {
@@ -164,7 +164,7 @@ async function assertTeamSpawnAllowed(cwd: string, env: NodeJS.ProcessEnv = proc
     return;
   }
 
-  const activeTeams = await findActiveTeamsV2(cwd);
+  const activeTeams = await findActiveTeams(cwd);
   for (const activeTeam of activeTeams) {
     const manifest = await teamReadManifest(activeTeam, cwd);
     const governance = normalizeTeamGovernance(manifest?.governance, manifest?.policy);
@@ -490,49 +490,26 @@ export async function cleanupTeamJob(jobId: string, graceMs = 10_000): Promise<T
 
 export async function teamStatusByTeamName(teamName: string, cwd = process.cwd()): Promise<Record<string, unknown>> {
   validateTeamName(teamName);
-
-  const runtimeV2 = await import('../team/runtime-v2.js');
-  if (runtimeV2.isRuntimeV2Enabled()) {
-    const snapshot = await runtimeV2.monitorTeamV2(teamName, cwd);
-    if (!snapshot) {
-      return {
-        teamName,
-        running: false,
-        error: 'Team state not found',
-      };
-    }
-
-    const config = await readTeamConfig(teamName, cwd);
-    return {
-      teamName,
-      running: true,
-      sessionName: config?.tmux_session,
-      leaderPaneId: config?.leader_pane_id,
-      workerPaneIds: Array.from(new Set(
-        (config?.workers ?? [])
-          .map((worker) => worker.pane_id)
-          .filter((paneId): paneId is string => typeof paneId === 'string' && paneId.trim().length > 0),
-      )),
-      snapshot,
-    };
-  }
-
-  const runtime = await resumeTeam(teamName, cwd);
-  if (!runtime) {
+  const snapshot = await monitorTeam(teamName, cwd);
+  if (!snapshot) {
     return {
       teamName,
       running: false,
-      error: 'Team session is not currently resumable',
+      error: 'Team state not found',
     };
   }
-
-  const snapshot = await monitorTeam(teamName, cwd, runtime.workerPaneIds);
+  
+  const config = await readTeamConfig(teamName, cwd);
   return {
     teamName,
     running: true,
-    sessionName: runtime.sessionName,
-    leaderPaneId: runtime.leaderPaneId,
-    workerPaneIds: runtime.workerPaneIds,
+    sessionName: config?.tmux_session,
+    leaderPaneId: config?.leader_pane_id,
+    workerPaneIds: Array.from(new Set(
+      (config?.workers ?? [])
+        .map((worker) => worker.pane_id)
+        .filter((paneId): paneId is string => typeof paneId === 'string' && paneId.trim().length > 0),
+    )),
     snapshot,
   };
 }
@@ -552,31 +529,21 @@ export async function teamResumeByName(teamName: string, cwd = process.cwd()): P
     teamName,
     resumed: true,
     sessionName: runtime.sessionName,
-    leaderPaneId: runtime.leaderPaneId,
-    workerPaneIds: runtime.workerPaneIds,
-    activeWorkers: runtime.activeWorkers.size,
+    leaderPaneId: runtime.config.leader_pane_id,
+    workerPaneIds: Array.from(new Set(
+      (runtime.config.workers ?? [])
+        .map((worker) => worker.pane_id)
+        .filter((paneId): paneId is string => typeof paneId === 'string' && paneId.trim().length > 0),
+    )),
+    activeWorkers: (runtime.config.workers ?? []).length,
   };
 }
 
 export async function teamShutdownByName(teamName: string, options: { cwd?: string; force?: boolean } = {}): Promise<Record<string, unknown>> {
   validateTeamName(teamName);
   const cwd = options.cwd ?? process.cwd();
-
-  const runtimeV2 = await import('../team/runtime-v2.js');
-  if (runtimeV2.isRuntimeV2Enabled()) {
-    const config = await readTeamConfig(teamName, cwd);
-    await runtimeV2.shutdownTeamV2(teamName, cwd, { force: Boolean(options.force) });
-    return {
-      teamName,
-      shutdown: true,
-      forced: Boolean(options.force),
-      sessionFound: Boolean(config),
-    };
-  }
-
-  const runtime = await resumeTeam(teamName, cwd);
-
-  if (!runtime) {
+  const config = await readTeamConfig(teamName, cwd);
+  if (!config) {
     if (options.force) {
       await rm(teamStateRoot(cwd, teamName), { recursive: true, force: true }).catch(() => undefined);
       return {
@@ -590,15 +557,7 @@ export async function teamShutdownByName(teamName: string, options: { cwd?: stri
     throw new Error(`Team ${teamName} is not running. Use --force to clear stale state.`);
   }
 
-  await shutdownTeam(
-    runtime.teamName,
-    runtime.sessionName,
-    runtime.cwd,
-    options.force ? 0 : 30_000,
-    runtime.workerPaneIds,
-    runtime.leaderPaneId,
-    runtime.ownsWindow,
-  );
+  await shutdownTeam(teamName, cwd, { force: Boolean(options.force), timeoutMs: options.force ? 0 : 30_000 });
 
   return {
     teamName,

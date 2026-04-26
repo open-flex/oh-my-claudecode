@@ -5,7 +5,6 @@ import { readFile, readdir } from 'fs/promises';
 import type { TeamTaskStatus } from '../contracts.js';
 import type {
   TeamTask,
-  TeamTaskV2,
   TaskReadiness,
   ClaimTaskResult,
   TransitionTaskResult,
@@ -41,7 +40,6 @@ interface ClaimTaskDeps extends TaskReadDeps {
   cwd: string;
   readTeamConfig: (teamName: string, cwd: string) => Promise<{ workers: Array<{ name: string }> } | null>;
   withTaskClaimLock: <T>(teamName: string, taskId: string, cwd: string, fn: () => Promise<T>) => Promise<{ ok: true; value: T } | { ok: false }>;
-  normalizeTask: (task: TeamTask) => TeamTaskV2;
   isTerminalTaskStatus: (status: TeamTaskStatus) => boolean;
   taskFilePath: (teamName: string, taskId: string, cwd: string) => string;
   writeAtomic: (path: string, data: string) => Promise<void>;
@@ -68,29 +66,28 @@ export async function claimTask(
     const current = await deps.readTask(deps.teamName, taskId, deps.cwd);
     if (!current) return { ok: false as const, error: 'task_not_found' as const };
 
-    const v = deps.normalizeTask(current);
-    if (expectedVersion !== null && v.version !== expectedVersion) return { ok: false as const, error: 'claim_conflict' as const };
+    if (expectedVersion !== null && current.version !== expectedVersion) return { ok: false as const, error: 'claim_conflict' as const };
 
     const readinessAfterLock = await computeTaskReadiness(deps.teamName, taskId, deps.cwd, deps);
     if (readinessAfterLock.ready === false) {
       return { ok: false as const, error: 'blocked_dependency' as const, dependencies: readinessAfterLock.dependencies };
     }
 
-    if (deps.isTerminalTaskStatus(v.status)) return { ok: false as const, error: 'already_terminal' as const };
-    if (v.status === 'in_progress') return { ok: false as const, error: 'claim_conflict' as const };
+    if (deps.isTerminalTaskStatus(current.status)) return { ok: false as const, error: 'already_terminal' as const };
+    if (current.status === 'in_progress') return { ok: false as const, error: 'claim_conflict' as const };
 
-    if (v.status === 'pending' || v.status === 'blocked') {
-      if (v.claim) return { ok: false as const, error: 'claim_conflict' as const };
-      if (v.owner && v.owner !== workerName) return { ok: false as const, error: 'claim_conflict' as const };
+    if (current.status === 'pending' || current.status === 'blocked') {
+      if (current.claim) return { ok: false as const, error: 'claim_conflict' as const };
+      if (current.owner && current.owner !== workerName) return { ok: false as const, error: 'claim_conflict' as const };
     }
 
     const claimToken = randomUUID();
-    const updated: TeamTaskV2 = {
-      ...v,
+    const updated: TeamTask = {
+      ...current,
       status: 'in_progress',
       owner: workerName,
       claim: { owner: workerName, token: claimToken, leased_until: new Date(Date.now() + 15 * 60 * 1000).toISOString() },
-      version: v.version + 1,
+      version: current.version + 1,
     };
 
     await deps.writeAtomic(deps.taskFilePath(deps.teamName, taskId, deps.cwd), JSON.stringify(updated, null, 2));
@@ -131,22 +128,21 @@ export async function transitionTaskStatus(
     const current = await deps.readTask(deps.teamName, taskId, deps.cwd);
     if (!current) return { ok: false as const, error: 'task_not_found' as const };
 
-    const v = deps.normalizeTask(current);
-    if (deps.isTerminalTaskStatus(v.status)) return { ok: false as const, error: 'already_terminal' as const };
-    if (!deps.canTransitionTaskStatus(v.status, to)) return { ok: false as const, error: 'invalid_transition' as const };
-    if (v.status !== from) return { ok: false as const, error: 'invalid_transition' as const };
+    if (deps.isTerminalTaskStatus(current.status)) return { ok: false as const, error: 'already_terminal' as const };
+    if (!deps.canTransitionTaskStatus(current.status, to)) return { ok: false as const, error: 'invalid_transition' as const };
+    if (current.status !== from) return { ok: false as const, error: 'invalid_transition' as const };
 
-    if (!v.owner || !v.claim || v.claim.owner !== v.owner || v.claim.token !== claimToken) {
+    if (!current.owner || !current.claim || current.claim.owner !== current.owner || current.claim.token !== claimToken) {
       return { ok: false as const, error: 'claim_conflict' as const };
     }
-    if (new Date(v.claim.leased_until) <= new Date()) return { ok: false as const, error: 'lease_expired' as const };
+    if (new Date(current.claim.leased_until) <= new Date()) return { ok: false as const, error: 'lease_expired' as const };
 
-    const updated: TeamTaskV2 = {
-      ...v,
+    const updated: TeamTask = {
+      ...current,
       status: to,
-      completed_at: to === 'completed' ? new Date().toISOString() : v.completed_at,
+      completed_at: to === 'completed' ? new Date().toISOString() : current.completed_at,
       claim: undefined,
-      version: v.version + 1,
+      version: current.version + 1,
     };
     await deps.writeAtomic(deps.taskFilePath(deps.teamName, taskId, deps.cwd), JSON.stringify(updated, null, 2));
 
@@ -200,21 +196,20 @@ export async function releaseTaskClaim(
     const current = await deps.readTask(deps.teamName, taskId, deps.cwd);
     if (!current) return { ok: false as const, error: 'task_not_found' as const };
 
-    const v = deps.normalizeTask(current);
-    if (v.status === 'pending' && !v.claim && !v.owner) return { ok: true as const, task: v };
-    if (v.status === 'completed' || v.status === 'failed') return { ok: false as const, error: 'already_terminal' as const };
+    if (current.status === 'pending' && !current.claim && !current.owner) return { ok: true as const, task: current };
+    if (current.status === 'completed' || current.status === 'failed') return { ok: false as const, error: 'already_terminal' as const };
 
-    if (!v.owner || !v.claim || v.claim.owner !== v.owner || v.claim.token !== claimToken) {
+    if (!current.owner || !current.claim || current.claim.owner !== current.owner || current.claim.token !== claimToken) {
       return { ok: false as const, error: 'claim_conflict' as const };
     }
-    if (new Date(v.claim.leased_until) <= new Date()) return { ok: false as const, error: 'lease_expired' as const };
+    if (new Date(current.claim.leased_until) <= new Date()) return { ok: false as const, error: 'lease_expired' as const };
 
-    const updated: TeamTaskV2 = {
-      ...v,
+    const updated: TeamTask = {
+      ...current,
       status: 'pending',
       owner: undefined,
       claim: undefined,
-      version: v.version + 1,
+      version: current.version + 1,
     };
     await deps.writeAtomic(deps.taskFilePath(deps.teamName, taskId, deps.cwd), JSON.stringify(updated, null, 2));
     return { ok: true as const, task: updated };
@@ -230,7 +225,6 @@ export async function listTasks(
   deps: {
     teamDir: (teamName: string, cwd: string) => string;
     isTeamTask: (value: unknown) => value is TeamTask;
-    normalizeTask: (task: TeamTask) => TeamTaskV2;
   },
 ): Promise<TeamTask[]> {
   const tasksRoot = join(deps.teamDir(teamName, cwd), 'tasks');
@@ -239,7 +233,7 @@ export async function listTasks(
   const entries = await readdir(tasksRoot, { withFileTypes: true });
   const matched = entries.flatMap((entry) => {
     if (!entry.isFile()) return [];
-    const match = /^(?:task-)?(\d+)\.json$/.exec(entry.name);
+    const match = /^task-(\d+)\.json$/.exec(entry.name);
     if (!match) return [];
     return [{ id: match[1], fileName: entry.name }];
   });
@@ -250,16 +244,15 @@ export async function listTasks(
         const raw = await readFile(join(tasksRoot, fileName), 'utf8');
         const parsed = JSON.parse(raw) as unknown;
         if (!deps.isTeamTask(parsed)) return null;
-        const normalized = deps.normalizeTask(parsed);
-        if (normalized.id !== id) return null;
-        return normalized;
+        if (parsed.id !== id) return null;
+        return parsed;
       } catch {
         return null;
       }
     }),
   );
 
-  const tasks: TeamTaskV2[] = [];
+  const tasks: TeamTask[] = [];
   for (const task of loaded) {
     if (task) tasks.push(task);
   }

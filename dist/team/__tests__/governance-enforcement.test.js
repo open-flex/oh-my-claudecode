@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mkdtemp, mkdir, rm, writeFile } from 'fs/promises';
 import { dirname, join } from 'path';
 import { tmpdir } from 'os';
-import { shutdownTeamV2 } from '../runtime-v2.js';
+import { shutdownTeam } from '../runtime.js';
 import { teamClaimTask } from '../team-ops.js';
 describe('team governance enforcement', () => {
     let cwd;
@@ -81,6 +81,7 @@ describe('team governance enforcement', () => {
             description: 'requires approval',
             status: 'pending',
             requires_code_change: true,
+            version: 1,
             created_at: new Date().toISOString(),
         });
         const blocked = await teamClaimTask(teamName, '1', 'worker-1', null, cwd);
@@ -130,9 +131,10 @@ describe('team governance enforcement', () => {
             subject: 'still pending',
             description: 'pending',
             status: 'pending',
+            version: 1,
             created_at: new Date().toISOString(),
         });
-        await expect(shutdownTeamV2(teamName, cwd)).resolves.toBeUndefined();
+        await expect(shutdownTeam(teamName, cwd)).resolves.toBeUndefined();
     });
 });
 //# sourceMappingURL=governance-enforcement.test.js.map

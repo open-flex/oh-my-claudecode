@@ -9,18 +9,18 @@
  * Modeled after oh-my-codex/src/team/team-ops.ts.
  */
 import type { TeamTaskStatus } from './contracts.js';
-import type { TeamTask, TeamTaskV2, TeamTaskClaim, TeamConfig, TeamManifestV2, WorkerInfo, WorkerStatus, WorkerHeartbeat, TeamEvent, TeamMailboxMessage, TeamMailbox, TaskApprovalRecord, ClaimTaskResult, TransitionTaskResult, ReleaseTaskClaimResult, TaskReadiness, TeamSummary, ShutdownAck, TeamMonitorSnapshotState } from './types.js';
-export type { TeamConfig, WorkerInfo, WorkerHeartbeat, WorkerStatus, TeamTask, TeamTaskV2, TeamTaskClaim, TeamManifestV2, TeamEvent, TeamMailboxMessage, TeamMailbox, TaskApprovalRecord, ClaimTaskResult, TransitionTaskResult, ReleaseTaskClaimResult, TaskReadiness, TeamSummary, ShutdownAck, TeamMonitorSnapshotState, };
+import type { TeamTask, TeamTaskClaim, TeamConfig, TeamManifest, WorkerInfo, WorkerStatus, WorkerHeartbeat, TeamEvent, TeamMailboxMessage, TeamMailbox, TaskApprovalRecord, ClaimTaskResult, TransitionTaskResult, ReleaseTaskClaimResult, TaskReadiness, TeamSummary, ShutdownAck, TeamMonitorSnapshotState } from './types.js';
+export type { TeamConfig, WorkerInfo, WorkerHeartbeat, WorkerStatus, TeamTask, TeamTaskClaim, TeamManifest, TeamEvent, TeamMailboxMessage, TeamMailbox, TaskApprovalRecord, ClaimTaskResult, TransitionTaskResult, ReleaseTaskClaimResult, TaskReadiness, TeamSummary, ShutdownAck, TeamMonitorSnapshotState, };
 declare function writeAtomic(path: string, data: string): Promise<void>;
 export declare function teamReadConfig(teamName: string, cwd: string): Promise<TeamConfig | null>;
-export declare function teamReadManifest(teamName: string, cwd: string): Promise<TeamManifestV2 | null>;
+export declare function teamReadManifest(teamName: string, cwd: string): Promise<TeamManifest | null>;
 export declare function teamCleanup(teamName: string, cwd: string): Promise<void>;
 export declare function teamWriteWorkerIdentity(teamName: string, workerName: string, identity: WorkerInfo, cwd: string): Promise<void>;
 export declare function teamReadWorkerHeartbeat(teamName: string, workerName: string, cwd: string): Promise<WorkerHeartbeat | null>;
 export declare function teamUpdateWorkerHeartbeat(teamName: string, workerName: string, heartbeat: WorkerHeartbeat, cwd: string): Promise<void>;
 export declare function teamReadWorkerStatus(teamName: string, workerName: string, cwd: string): Promise<WorkerStatus>;
 export declare function teamWriteWorkerInbox(teamName: string, workerName: string, prompt: string, cwd: string): Promise<void>;
-export declare function teamCreateTask(teamName: string, task: Omit<TeamTask, 'id' | 'created_at'>, cwd: string): Promise<TeamTaskV2>;
+export declare function teamCreateTask(teamName: string, task: Omit<TeamTask, 'id' | 'created_at' | 'version'>, cwd: string): Promise<TeamTask>;
 export declare function teamReadTask(teamName: string, taskId: string, cwd: string): Promise<TeamTask | null>;
 export declare function teamListTasks(teamName: string, cwd: string): Promise<TeamTask[]>;
 export declare function teamUpdateTask(teamName: string, taskId: string, updates: Record<string, unknown>, cwd: string): Promise<TeamTask | null>;

@@ -29,7 +29,7 @@ export interface BridgeWorkerPermissions {
     allowedCommands: string[];
     maxFileSize: number;
 }
-/** Mirrors the JSON structure of {cwd}/.omc/state/team/{team}/tasks/{id}.json */
+/** Mirrors the JSON structure of {cwd}/.omc/state/team/{team}/tasks/task-{id}.json */
 export interface TaskFile {
     id: string;
     subject: string;
@@ -123,17 +123,13 @@ export interface TaskFailureSidecar {
 export type WorkerBackend = 'claude-native' | 'mcp-codex' | 'mcp-gemini' | 'tmux-claude' | 'tmux-codex' | 'tmux-gemini' | 'tmux-cursor';
 /** Worker capability tag */
 export type WorkerCapability = 'code-edit' | 'code-review' | 'security-review' | 'architecture' | 'testing' | 'documentation' | 'ui-design' | 'refactoring' | 'research' | 'general';
-/** Team task with required version for optimistic concurrency */
-export interface TeamTaskV2 extends TeamTask {
-    version: number;
-}
 /** Claim metadata attached to a task */
 export interface TeamTaskClaim {
     owner: string;
     token: string;
     leased_until: string;
 }
-/** Base team task matching OMX shape */
+/** Canonical team task shape */
 export interface TeamTask {
     id: string;
     subject: string;
@@ -146,7 +142,7 @@ export interface TeamTask {
     error?: string;
     blocked_by?: string[];
     depends_on?: string[];
-    version?: number;
+    version: number;
     claim?: TeamTaskClaim;
     created_at: string;
     completed_at?: string;
@@ -181,8 +177,8 @@ export interface PermissionsSnapshot {
     sandbox_mode: string;
     network_access: boolean;
 }
-/** V2 team manifest matching OMX schema */
-export interface TeamManifestV2 {
+/** Team manifest matching the current OMX schema */
+export interface TeamManifest {
     schema_version: 2;
     name: string;
     task: string;
@@ -222,7 +218,7 @@ export interface WorkerInfo {
     /**
      * Verdict-output file path for CLI-worker output contract (AC-7).
      * Set when the worker was spawned for a reviewer role on codex/gemini.
-     * Consumed by the worker-completion handler in runtime-v2.
+     * Consumed by the worker-completion handler in runtime.
      */
     output_file?: string;
 }
@@ -347,7 +343,7 @@ export type TaskReadiness = {
 /** Result of claiming a task */
 export type ClaimTaskResult = {
     ok: true;
-    task: TeamTaskV2;
+    task: TeamTask;
     claimToken: string;
 } | {
     ok: false;
@@ -357,7 +353,7 @@ export type ClaimTaskResult = {
 /** Result of transitioning a task status */
 export type TransitionTaskResult = {
     ok: true;
-    task: TeamTaskV2;
+    task: TeamTask;
 } | {
     ok: false;
     error: 'claim_conflict' | 'invalid_transition' | 'task_not_found' | 'already_terminal' | 'lease_expired';
@@ -365,7 +361,7 @@ export type TransitionTaskResult = {
 /** Result of releasing a task claim */
 export type ReleaseTaskClaimResult = {
     ok: true;
-    task: TeamTaskV2;
+    task: TeamTask;
 } | {
     ok: false;
     error: 'claim_conflict' | 'task_not_found' | 'already_terminal' | 'lease_expired';

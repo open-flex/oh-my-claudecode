@@ -46,9 +46,6 @@ export declare function readTask(teamName: string, taskId: string, opts?: {
  * lock to prevent lost updates from concurrent writers. Falls back to
  * unlocked write if the lock cannot be acquired within a single attempt
  * (backward-compatible degradation with a console warning).
- *
- * Always writes to the canonical path. If the task only exists in the legacy
- * path, it is migrated to canonical on the first update.
  */
 export declare function updateTask(teamName: string, taskId: string, updates: TaskFileUpdate, opts?: {
     useLock?: boolean;

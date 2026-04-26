@@ -32,15 +32,6 @@ function canonicalTaskFilePath(teamName, taskId, cwd) {
     const normalizedTaskId = normalizeTaskId(taskId);
     return join(absPath(cwd, TeamPaths.tasks(teamName)), `task-${normalizedTaskId}.json`);
 }
-function legacyTaskFilePath(teamName, taskId, cwd) {
-    const normalizedTaskId = normalizeTaskId(taskId);
-    return join(absPath(cwd, TeamPaths.tasks(teamName)), `${normalizedTaskId}.json`);
-}
-function taskFileCandidates(teamName, taskId, cwd) {
-    const canonical = canonicalTaskFilePath(teamName, taskId, cwd);
-    const legacy = legacyTaskFilePath(teamName, taskId, cwd);
-    return canonical === legacy ? [canonical] : [canonical, legacy];
-}
 async function writeAtomic(path, data) {
     const tmp = `${path}.${process.pid}.tmp`;
     await mkdir(dirname(path), { recursive: true });
@@ -59,14 +50,17 @@ async function readJsonSafe(path) {
         return null;
     }
 }
-function normalizeTask(task) {
-    return { ...task, version: task.version ?? 1 };
-}
 function isTeamTask(value) {
     if (!value || typeof value !== 'object')
         return false;
     const v = value;
-    return typeof v.id === 'string' && typeof v.subject === 'string' && typeof v.status === 'string';
+    return (typeof v.id === 'string'
+        && typeof v.subject === 'string'
+        && typeof v.status === 'string'
+        && typeof v.created_at === 'string'
+        && typeof v.version === 'number'
+        && Number.isFinite(v.version)
+        && v.version >= 1);
 }
 // Simple file-based lock (best-effort, non-blocking)
 async function withLock(lockDir, fn) {
@@ -248,19 +242,15 @@ export async function teamCreateTask(teamName, task, cwd) {
     throw new Error(`Failed to acquire task creation lock for team ${teamName} after ${timeoutMs}ms`);
 }
 export async function teamReadTask(teamName, taskId, cwd) {
-    for (const candidate of taskFileCandidates(teamName, taskId, cwd)) {
-        const task = await readJsonSafe(candidate);
-        if (!task || !isTeamTask(task))
-            continue;
-        return normalizeTask(task);
-    }
-    return null;
+    const task = await readJsonSafe(canonicalTaskFilePath(teamName, taskId, cwd));
+    if (!task || !isTeamTask(task))
+        return null;
+    return task;
 }
 export async function teamListTasks(teamName, cwd) {
     return listTasksImpl(teamName, cwd, {
         teamDir: (tn, c) => teamDir(tn, c),
         isTeamTask,
-        normalizeTask,
     });
 }
 export async function teamUpdateTask(teamName, taskId, updates, cwd) {
@@ -273,7 +263,7 @@ export async function teamUpdateTask(teamName, taskId, updates, cwd) {
             if (!existing)
                 return null;
             const merged = {
-                ...normalizeTask(existing),
+                ...existing,
                 ...updates,
                 id: existing.id,
                 created_at: existing.created_at,
@@ -308,7 +298,6 @@ export async function teamClaimTask(teamName, taskId, workerName, expectedVersio
         readTask: teamReadTask,
         readTeamConfig: teamReadConfig,
         withTaskClaimLock,
-        normalizeTask,
         isTerminalTaskStatus: isTerminalTeamTaskStatus,
         taskFilePath: (tn, tid, c) => canonicalTaskFilePath(tn, tid, c),
         writeAtomic,
@@ -321,7 +310,6 @@ export async function teamTransitionTaskStatus(teamName, taskId, from, to, claim
         readTask: teamReadTask,
         readTeamConfig: teamReadConfig,
         withTaskClaimLock,
-        normalizeTask,
         isTerminalTaskStatus: isTerminalTeamTaskStatus,
         canTransitionTaskStatus: canTransitionTeamTaskStatus,
         taskFilePath: (tn, tid, c) => canonicalTaskFilePath(tn, tid, c),
@@ -338,7 +326,6 @@ export async function teamReleaseTaskClaim(teamName, taskId, claimToken, workerN
         readTask: teamReadTask,
         readTeamConfig: teamReadConfig,
         withTaskClaimLock,
-        normalizeTask,
         isTerminalTaskStatus: isTerminalTeamTaskStatus,
         taskFilePath: (tn, tid, c) => canonicalTaskFilePath(tn, tid, c),
         writeAtomic,

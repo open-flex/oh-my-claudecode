@@ -1,7 +1,7 @@
 import type {
   TeamConfig,
   TeamGovernance,
-  TeamManifestV2,
+  TeamManifest,
   TeamPolicy,
   TeamTransportPolicy,
 } from './types.js';
@@ -65,7 +65,7 @@ export function normalizeTeamGovernance(
   };
 }
 
-export function normalizeTeamManifest(manifest: TeamManifestV2): TeamManifestV2 {
+export function normalizeTeamManifest(manifest: TeamManifest): TeamManifest {
   return {
     ...manifest,
     policy: normalizeTeamTransportPolicy(manifest.policy),
@@ -83,7 +83,7 @@ export function getConfigGovernance(config: TeamConfig | null | undefined): Team
  */
 export function resolveLifecycleProfile(
   config?: Pick<TeamConfig, 'lifecycle_profile'> | null,
-  manifest?: Pick<TeamManifestV2, 'lifecycle_profile'> | null,
+  manifest?: Pick<TeamManifest, 'lifecycle_profile'> | null,
 ): LifecycleProfile {
   if (manifest?.lifecycle_profile) return manifest.lifecycle_profile;
   if (config?.lifecycle_profile) return config.lifecycle_profile;
@@ -93,7 +93,7 @@ export function resolveLifecycleProfile(
 /** Returns true when the effective lifecycle profile is 'linked_ralph' */
 export function isLinkedRalphProfile(
   config?: Pick<TeamConfig, 'lifecycle_profile'> | null,
-  manifest?: Pick<TeamManifestV2, 'lifecycle_profile'> | null,
+  manifest?: Pick<TeamManifest, 'lifecycle_profile'> | null,
 ): boolean {
   return resolveLifecycleProfile(config, manifest) === 'linked_ralph';
 }

@@ -28,7 +28,7 @@ function writeWorkerRegistry(workers) {
     atomicWriteJson(registryPath, { teamName: TEST_TEAM, workers });
 }
 function writeTask(task) {
-    atomicWriteJson(join(TASKS_DIR, `${task.id}.json`), task);
+    atomicWriteJson(join(TASKS_DIR, `task-${task.id}.json`), task);
 }
 function writeHeartbeatFile(data) {
     const hbPath = join(WORK_DIR, '.omc', 'state', 'team-bridge', TEST_TEAM, `${data.workerName}.heartbeat.json`);

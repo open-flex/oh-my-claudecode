@@ -42,7 +42,7 @@ const REG_TEAM = 'test-edge-reg-team';
 const CONFIG_DIR = join(getClaudeConfigDir(), 'teams', REG_TEAM);
 function writeTaskHelper(task) {
     mkdirSync(TASKS_DIR, { recursive: true });
-    writeFileSync(join(TASKS_DIR, `${task.id}.json`), JSON.stringify(task, null, 2));
+    writeFileSync(join(TASKS_DIR, `task-${task.id}.json`), JSON.stringify(task, null, 2));
 }
 function makeHeartbeat(overrides) {
     return {
@@ -158,14 +158,13 @@ describe('task-file-ops edge cases', () => {
     });
     describe('readTask with empty file', () => {
         it('returns null for empty JSON file', () => {
-            writeFileSync(join(TASKS_DIR, 'empty.json'), '');
+            writeFileSync(join(TASKS_DIR, 'task-empty.json'), '');
             expect(readTask(EDGE_TEAM_TASKS, 'empty', { cwd: TASK_TEST_CWD })).toBeNull();
         });
     });
     describe('readTask with valid JSON but non-object', () => {
-        it('returns the parsed value (no schema validation)', () => {
-            writeFileSync(join(TASKS_DIR, 'array.json'), '[]');
-            // readTask just does JSON.parse and casts, so an array would be returned
+        it('returns parsed JSON when canonical task file exists', () => {
+            writeFileSync(join(TASKS_DIR, 'task-array.json'), '[]');
             const result = readTask(EDGE_TEAM_TASKS, 'array', { cwd: TASK_TEST_CWD });
             expect(result).toEqual([]);
         });
@@ -204,8 +203,8 @@ describe('task-file-ops edge cases', () => {
     describe('listTaskIds excludes .tmp files with various PIDs', () => {
         it('filters out temp files regardless of PID suffix', () => {
             writeTaskHelper({ id: '1', subject: 'T', description: 'D', status: 'pending', owner: 'w', blocks: [], blockedBy: [] });
-            writeFileSync(join(TASKS_DIR, '1.json.tmp.99999'), '{}');
-            writeFileSync(join(TASKS_DIR, '2.json.tmp.1'), '{}');
+            writeFileSync(join(TASKS_DIR, 'task-1.json.tmp.99999'), '{}');
+            writeFileSync(join(TASKS_DIR, 'task-2.json.tmp.1'), '{}');
             const ids = listTaskIds(EDGE_TEAM_TASKS, { cwd: TASK_TEST_CWD });
             expect(ids).toEqual(['1']);
         });

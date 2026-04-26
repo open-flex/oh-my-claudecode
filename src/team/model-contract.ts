@@ -33,7 +33,7 @@ export interface WorkerLaunchConfig {
   /**
    * Optional path the worker writes its structured verdict JSON to
    * (used by the CLI-worker output contract for critic/reviewer stages).
-   * Consumed by the worker-completion handler in runtime-v2.
+   * Consumed by the worker-completion handler in runtime.
    */
   output_file?: string;
 }

@@ -53,8 +53,8 @@ export { LayoutStabilizer } from './layout-stabilizer.js';
 export type { LayoutStabilizerOptions } from './layout-stabilizer.js';
 export type { TeamPhase, PhaseableTask } from './phase-controller.js';
 export { inferPhase, getPhaseTransitionLog, isTerminalPhase } from './phase-controller.js';
-export type { TeamConfig, TeamRuntime, WorkerStatus as RuntimeWorkerStatus, TeamSnapshot, WatchdogCompletionEvent, } from './runtime.js';
-export { startTeam, monitorTeam, assignTask, shutdownTeam, resumeTeam, watchdogCliWorkers } from './runtime.js';
+export type { TeamRuntime, TeamSnapshot, } from './runtime.js';
+export { startTeam, monitorTeam, shutdownTeam, resumeTeam, findActiveTeams } from './runtime.js';
 export { injectToLeaderPane } from './tmux-session.js';
 export { TEAM_API_OPERATIONS, LEGACY_TEAM_MCP_TOOLS, resolveTeamApiOperation, executeTeamApiOperation, buildLegacyTeamDeprecationHint, } from './api-interop.js';
 export type { TeamApiOperation, TeamApiEnvelope } from './api-interop.js';
@@ -64,6 +64,6 @@ export { checkLeaderStaleness, maybeNudgeLeader } from '../hooks/team-leader-nud
 export type { TmuxRunner } from '../hooks/team-leader-nudge-hook.js';
 export { TEAM_NAME_SAFE_PATTERN, WORKER_NAME_SAFE_PATTERN, TASK_ID_SAFE_PATTERN, TEAM_TASK_STATUSES, TEAM_TERMINAL_TASK_STATUSES, TEAM_TASK_STATUS_TRANSITIONS, TEAM_EVENT_TYPES, TEAM_TASK_APPROVAL_STATUSES, isTerminalTeamTaskStatus, canTransitionTeamTaskStatus, } from './contracts.js';
 export type { TeamTaskStatus, TeamEventType, TeamTaskApprovalStatus, } from './contracts.js';
-export type { TeamTask, TeamTaskV2, TeamTaskClaim, TeamLeader, TeamTransportPolicy, TeamGovernance, TeamPolicy, PermissionsSnapshot, TeamManifestV2, WorkerInfo, TeamConfig as TeamConfigV2, TeamDispatchRequestKind, TeamDispatchRequestStatus, TeamDispatchTransportPreference, TeamDispatchRequest, TeamDispatchRequestInput, TeamEvent, TeamMailboxMessage, TeamMailbox, TaskApprovalRecord, TaskReadiness, ClaimTaskResult, TransitionTaskResult, ReleaseTaskClaimResult, TeamSummary, TeamSummaryPerformance, ShutdownAck, TeamMonitorSnapshotState, TeamPhaseState, WorkerStatus as TeamWorkerStatus, WorkerHeartbeat as TeamWorkerHeartbeat, } from './types.js';
+export type { TeamTask, TeamTaskClaim, TeamLeader, TeamTransportPolicy, TeamGovernance, TeamPolicy, TeamConfig, PermissionsSnapshot, TeamManifest, WorkerInfo, TeamDispatchRequestKind, TeamDispatchRequestStatus, TeamDispatchTransportPreference, TeamDispatchRequest, TeamDispatchRequestInput, TeamEvent, TeamMailboxMessage, TeamMailbox, TaskApprovalRecord, TaskReadiness, ClaimTaskResult, TransitionTaskResult, ReleaseTaskClaimResult, TeamSummary, TeamSummaryPerformance, ShutdownAck, TeamMonitorSnapshotState, TeamPhaseState, WorkerStatus as TeamWorkerStatus, WorkerStatus as RuntimeWorkerStatus, WorkerHeartbeat as TeamWorkerHeartbeat, } from './types.js';
 export { DEFAULT_TEAM_TRANSPORT_POLICY, DEFAULT_TEAM_GOVERNANCE, normalizeTeamTransportPolicy, normalizeTeamGovernance, normalizeTeamManifest, getConfigGovernance, } from './governance.js';
 //# sourceMappingURL=index.d.ts.map

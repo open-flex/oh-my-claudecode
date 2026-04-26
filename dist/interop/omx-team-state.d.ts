@@ -6,7 +6,7 @@
  *
  * Data layout: .omx/state/team/{name}/
  *   config.json              — TeamConfig
- *   manifest.v2.json         — TeamManifestV2
+ *   manifest.json            — TeamManifest
  *   mailbox/{worker}.json    — TeamMailbox
  *   tasks/task-{id}.json     — TeamTask
  *   events/events.ndjson     — TeamEvent (append-only)
@@ -70,7 +70,7 @@ export interface OmxTeamEvent {
     message?: string;
     created_at: string;
 }
-export interface OmxTeamManifestV2 {
+export interface OmxTeamManifest {
     schema_version: 2;
     name: string;
     task: string;
@@ -86,7 +86,7 @@ export interface OmxTeamManifestV2 {
  */
 export declare function listOmxTeams(cwd: string): Promise<string[]>;
 /**
- * Read team config (tries manifest.v2.json first, falls back to config.json)
+ * Read team config (tries manifest.json first, falls back to config.json)
  */
 export declare function readOmxTeamConfig(teamName: string, cwd: string): Promise<OmxTeamConfig | null>;
 /**

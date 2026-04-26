@@ -164,7 +164,7 @@ describe('runtime-cli terminal preservation helper', () => {
             const stateRoot = join(cwd, '.omc', 'state', 'team', teamName);
             const tasksDir = join(stateRoot, 'tasks');
             mkdirSync(tasksDir, { recursive: true });
-            writeFileSync(join(tasksDir, '1.json'), JSON.stringify({
+            writeFileSync(join(tasksDir, 'task-1.json'), JSON.stringify({
                 id: '1',
                 status: 'completed',
                 result: 'PASS: complete without shutdown',
@@ -195,7 +195,7 @@ describe('runtime-cli terminal preservation helper', () => {
             const stateRoot = join(cwd, '.omc', 'state', 'team', teamName);
             const tasksDir = join(stateRoot, 'tasks');
             mkdirSync(tasksDir, { recursive: true });
-            writeFileSync(join(tasksDir, '1.json'), JSON.stringify({
+            writeFileSync(join(tasksDir, 'task-1.json'), JSON.stringify({
                 id: '1',
                 status: 'blocked',
                 summary: 'team stopped for inspection',

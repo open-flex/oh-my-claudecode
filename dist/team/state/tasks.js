@@ -30,30 +30,29 @@ export async function claimTask(taskId, workerName, expectedVersion, deps) {
         const current = await deps.readTask(deps.teamName, taskId, deps.cwd);
         if (!current)
             return { ok: false, error: 'task_not_found' };
-        const v = deps.normalizeTask(current);
-        if (expectedVersion !== null && v.version !== expectedVersion)
+        if (expectedVersion !== null && current.version !== expectedVersion)
             return { ok: false, error: 'claim_conflict' };
         const readinessAfterLock = await computeTaskReadiness(deps.teamName, taskId, deps.cwd, deps);
         if (readinessAfterLock.ready === false) {
             return { ok: false, error: 'blocked_dependency', dependencies: readinessAfterLock.dependencies };
         }
-        if (deps.isTerminalTaskStatus(v.status))
+        if (deps.isTerminalTaskStatus(current.status))
             return { ok: false, error: 'already_terminal' };
-        if (v.status === 'in_progress')
+        if (current.status === 'in_progress')
             return { ok: false, error: 'claim_conflict' };
-        if (v.status === 'pending' || v.status === 'blocked') {
-            if (v.claim)
+        if (current.status === 'pending' || current.status === 'blocked') {
+            if (current.claim)
                 return { ok: false, error: 'claim_conflict' };
-            if (v.owner && v.owner !== workerName)
+            if (current.owner && current.owner !== workerName)
                 return { ok: false, error: 'claim_conflict' };
         }
         const claimToken = randomUUID();
         const updated = {
-            ...v,
+            ...current,
             status: 'in_progress',
             owner: workerName,
             claim: { owner: workerName, token: claimToken, leased_until: new Date(Date.now() + 15 * 60 * 1000).toISOString() },
-            version: v.version + 1,
+            version: current.version + 1,
         };
         await deps.writeAtomic(deps.taskFilePath(deps.teamName, taskId, deps.cwd), JSON.stringify(updated, null, 2));
         return { ok: true, task: updated, claimToken };
@@ -69,24 +68,23 @@ export async function transitionTaskStatus(taskId, from, to, claimToken, deps) {
         const current = await deps.readTask(deps.teamName, taskId, deps.cwd);
         if (!current)
             return { ok: false, error: 'task_not_found' };
-        const v = deps.normalizeTask(current);
-        if (deps.isTerminalTaskStatus(v.status))
+        if (deps.isTerminalTaskStatus(current.status))
             return { ok: false, error: 'already_terminal' };
-        if (!deps.canTransitionTaskStatus(v.status, to))
+        if (!deps.canTransitionTaskStatus(current.status, to))
             return { ok: false, error: 'invalid_transition' };
-        if (v.status !== from)
+        if (current.status !== from)
             return { ok: false, error: 'invalid_transition' };
-        if (!v.owner || !v.claim || v.claim.owner !== v.owner || v.claim.token !== claimToken) {
+        if (!current.owner || !current.claim || current.claim.owner !== current.owner || current.claim.token !== claimToken) {
             return { ok: false, error: 'claim_conflict' };
         }
-        if (new Date(v.claim.leased_until) <= new Date())
+        if (new Date(current.claim.leased_until) <= new Date())
             return { ok: false, error: 'lease_expired' };
         const updated = {
-            ...v,
+            ...current,
             status: to,
-            completed_at: to === 'completed' ? new Date().toISOString() : v.completed_at,
+            completed_at: to === 'completed' ? new Date().toISOString() : current.completed_at,
             claim: undefined,
-            version: v.version + 1,
+            version: current.version + 1,
         };
         await deps.writeAtomic(deps.taskFilePath(deps.teamName, taskId, deps.cwd), JSON.stringify(updated, null, 2));
         if (to === 'completed') {
@@ -121,22 +119,21 @@ export async function releaseTaskClaim(taskId, claimToken, _workerName, deps) {
         const current = await deps.readTask(deps.teamName, taskId, deps.cwd);
         if (!current)
             return { ok: false, error: 'task_not_found' };
-        const v = deps.normalizeTask(current);
-        if (v.status === 'pending' && !v.claim && !v.owner)
-            return { ok: true, task: v };
-        if (v.status === 'completed' || v.status === 'failed')
+        if (current.status === 'pending' && !current.claim && !current.owner)
+            return { ok: true, task: current };
+        if (current.status === 'completed' || current.status === 'failed')
             return { ok: false, error: 'already_terminal' };
-        if (!v.owner || !v.claim || v.claim.owner !== v.owner || v.claim.token !== claimToken) {
+        if (!current.owner || !current.claim || current.claim.owner !== current.owner || current.claim.token !== claimToken) {
             return { ok: false, error: 'claim_conflict' };
         }
-        if (new Date(v.claim.leased_until) <= new Date())
+        if (new Date(current.claim.leased_until) <= new Date())
             return { ok: false, error: 'lease_expired' };
         const updated = {
-            ...v,
+            ...current,
             status: 'pending',
             owner: undefined,
             claim: undefined,
-            version: v.version + 1,
+            version: current.version + 1,
         };
         await deps.writeAtomic(deps.taskFilePath(deps.teamName, taskId, deps.cwd), JSON.stringify(updated, null, 2));
         return { ok: true, task: updated };
@@ -153,7 +150,7 @@ export async function listTasks(teamName, cwd, deps) {
     const matched = entries.flatMap((entry) => {
         if (!entry.isFile())
             return [];
-        const match = /^(?:task-)?(\d+)\.json$/.exec(entry.name);
+        const match = /^task-(\d+)\.json$/.exec(entry.name);
         if (!match)
             return [];
         return [{ id: match[1], fileName: entry.name }];
@@ -164,10 +161,9 @@ export async function listTasks(teamName, cwd, deps) {
             const parsed = JSON.parse(raw);
             if (!deps.isTeamTask(parsed))
                 return null;
-            const normalized = deps.normalizeTask(parsed);
-            if (normalized.id !== id)
+            if (parsed.id !== id)
                 return null;
-            return normalized;
+            return parsed;
         }
         catch {
             return null;

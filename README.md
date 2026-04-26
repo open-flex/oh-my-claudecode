@@ -158,7 +158,7 @@ omc team status auth-review
 omc team shutdown auth-review
 ```
 
-`/omc-teams` is available as a skill shortcut for the same `omc team ...` CLI runtime.
+`/omc-teams` is an optional in-session shortcut that invokes the same `omc team ...` CLI flow.
 
 For mixed Codex + Gemini work in one command, use the **`/ccg`** skill (routes via `/ask codex` + `/ask gemini`, then Claude synthesizes):
 

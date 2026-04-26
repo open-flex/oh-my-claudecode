@@ -237,13 +237,10 @@ export { inferPhase, getPhaseTransitionLog, isTerminalPhase } from './phase-cont
 
 // runtime: WorkerStatus conflicts with team-status.ts; export as RuntimeWorkerStatus
 export type {
-  TeamConfig,
   TeamRuntime,
-  WorkerStatus as RuntimeWorkerStatus,
   TeamSnapshot,
-  WatchdogCompletionEvent,
 } from './runtime.js';
-export { startTeam, monitorTeam, assignTask, shutdownTeam, resumeTeam, watchdogCliWorkers } from './runtime.js';
+export { startTeam, monitorTeam, shutdownTeam, resumeTeam, findActiveTeams } from './runtime.js';
 
 export { injectToLeaderPane } from './tmux-session.js';
 
@@ -294,16 +291,15 @@ export type {
 // OMX-aligned types
 export type {
   TeamTask,
-  TeamTaskV2,
   TeamTaskClaim,
   TeamLeader,
   TeamTransportPolicy,
   TeamGovernance,
   TeamPolicy,
+  TeamConfig,
   PermissionsSnapshot,
-  TeamManifestV2,
+  TeamManifest,
   WorkerInfo,
-  TeamConfig as TeamConfigV2,
   TeamDispatchRequestKind,
   TeamDispatchRequestStatus,
   TeamDispatchTransportPreference,
@@ -323,6 +319,7 @@ export type {
   TeamMonitorSnapshotState,
   TeamPhaseState,
   WorkerStatus as TeamWorkerStatus,
+  WorkerStatus as RuntimeWorkerStatus,
   WorkerHeartbeat as TeamWorkerHeartbeat,
 } from './types.js';
 

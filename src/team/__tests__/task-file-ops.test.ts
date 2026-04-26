@@ -17,7 +17,7 @@ let TASKS_DIR: string;
 
 function writeTask(task: TaskFile): void {
   mkdirSync(TASKS_DIR, { recursive: true });
-  writeFileSync(join(TASKS_DIR, `${task.id}.json`), JSON.stringify(task, null, 2));
+  writeFileSync(join(TASKS_DIR, `task-${task.id}.json`), JSON.stringify(task, null, 2));
 }
 
 /** Remove all .lock files from the test tasks directory */
@@ -79,9 +79,9 @@ describe('updateTask', () => {
   it('preserves unknown fields', () => {
     mkdirSync(TASKS_DIR, { recursive: true });
     const taskWithExtra = { id: '1', subject: 'Test', description: 'Desc', status: 'pending', owner: 'w', blocks: [], blockedBy: [], customField: 'keep' };
-    writeFileSync(join(TASKS_DIR, '1.json'), JSON.stringify(taskWithExtra));
+    writeFileSync(join(TASKS_DIR, 'task-1.json'), JSON.stringify(taskWithExtra));
     updateTask(TEST_TEAM, '1', { status: 'completed' }, { cwd: TEST_CWD });
-    const raw = JSON.parse(readFileSync(join(TASKS_DIR, '1.json'), 'utf-8'));
+    const raw = JSON.parse(readFileSync(join(TASKS_DIR, 'task-1.json'), 'utf-8'));
     expect(raw.customField).toBe('keep');
     expect(raw.status).toBe('completed');
   });
@@ -157,7 +157,7 @@ describe('findNextTask', () => {
     writeTask({ id: '1', subject: 'T1', description: 'D', status: 'pending', owner: 'w1', blocks: [], blockedBy: [] });
     const result = await findNextTask(TEST_TEAM, 'w1', { cwd: TEST_CWD });
     expect(result).not.toBeNull();
-    const raw = JSON.parse(readFileSync(join(TASKS_DIR, '1.json'), 'utf-8'));
+    const raw = JSON.parse(readFileSync(join(TASKS_DIR, 'task-1.json'), 'utf-8'));
     expect(raw.claimedBy).toBe('w1');
     expect(raw.claimPid).toBe(process.pid);
     expect(typeof raw.claimedAt).toBe('number');
@@ -167,7 +167,7 @@ describe('findNextTask', () => {
   it('sets task status to in_progress on disk', async () => {
     writeTask({ id: '1', subject: 'T1', description: 'D', status: 'pending', owner: 'w1', blocks: [], blockedBy: [] });
     await findNextTask(TEST_TEAM, 'w1', { cwd: TEST_CWD });
-    const raw = JSON.parse(readFileSync(join(TASKS_DIR, '1.json'), 'utf-8'));
+    const raw = JSON.parse(readFileSync(join(TASKS_DIR, 'task-1.json'), 'utf-8'));
     expect(raw.status).toBe('in_progress');
   });
 

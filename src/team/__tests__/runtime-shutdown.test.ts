@@ -5,11 +5,11 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import { createWorkerWorktree } from '../git-worktree.js';
 
-describe('shutdownTeamV2 detached worktree cleanup', () => {
+describe('shutdownTeam detached worktree cleanup', () => {
   let repoDir: string;
 
   beforeEach(() => {
-    repoDir = mkdtempSync(join(tmpdir(), 'omc-runtime-v2-shutdown-'));
+    repoDir = mkdtempSync(join(tmpdir(), 'omc-runtime-shutdown-'));
     execFileSync('git', ['init'], { cwd: repoDir, stdio: 'pipe' });
     execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: repoDir, stdio: 'pipe' });
     execFileSync('git', ['config', 'user.name', 'Test User'], { cwd: repoDir, stdio: 'pipe' });
@@ -46,8 +46,8 @@ describe('shutdownTeamV2 detached worktree cleanup', () => {
     const worktree = createWorkerWorktree(teamName, 'worker1', repoDir);
     expect(existsSync(worktree.path)).toBe(true);
 
-    const { shutdownTeamV2 } = await import('../runtime-v2.js');
-    await shutdownTeamV2(teamName, repoDir, { timeoutMs: 0 });
+    const { shutdownTeam } = await import('../runtime.js');
+    await shutdownTeam(teamName, repoDir, { timeoutMs: 0 });
 
     expect(existsSync(worktree.path)).toBe(false);
     expect(existsSync(teamRoot)).toBe(false);

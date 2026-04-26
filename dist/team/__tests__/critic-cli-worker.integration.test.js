@@ -4,7 +4,7 @@ import { execSync } from 'child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { processCliWorkerVerdicts } from '../runtime-v2.js';
+import { processCliWorkerVerdicts } from '../runtime.js';
 /**
  * AC-7 integration smoke: simulate a critic CLI worker by writing a verdict.json
  * to disk (as the codex CLI worker would on exit), then drive the post-exit

@@ -5,12 +5,12 @@
  * against previous snapshot, emits events, delivers mailbox messages,
  * and persists the new snapshot for the next cycle.
  *
- * NO polling watchdog. The caller (runtime-v2 or runtime-cli) drives
+ * NO polling watchdog. The caller (runtime or runtime-cli) drives
  * the monitor loop.
  */
-import type { TeamConfig, TeamManifestV2, TeamMonitorSnapshotState, TeamPhaseState, WorkerStatus, WorkerHeartbeat, WorkerInfo, TeamTask, TeamSummary } from './types.js';
+import type { TeamConfig, TeamManifest, TeamMonitorSnapshotState, TeamPhaseState, WorkerStatus, WorkerHeartbeat, WorkerInfo, TeamTask, TeamSummary } from './types.js';
 export declare function readTeamConfig(teamName: string, cwd: string): Promise<TeamConfig | null>;
-export declare function readTeamManifest(teamName: string, cwd: string): Promise<TeamManifestV2 | null>;
+export declare function readTeamManifest(teamName: string, cwd: string): Promise<TeamManifest | null>;
 export declare function readWorkerStatus(teamName: string, workerName: string, cwd: string): Promise<WorkerStatus>;
 export declare function writeWorkerStatus(teamName: string, workerName: string, status: WorkerStatus, cwd: string): Promise<void>;
 export declare function readWorkerHeartbeat(teamName: string, workerName: string, cwd: string): Promise<WorkerHeartbeat | null>;

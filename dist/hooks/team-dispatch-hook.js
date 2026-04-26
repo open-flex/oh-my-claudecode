@@ -501,7 +501,7 @@ export async function drainPendingTeamDispatch(options = { cwd: '' }) {
         if (processed >= maxPerTick)
             break;
         const teamDirPath = join(teamRoot, teamName);
-        const manifestPath = join(teamDirPath, 'manifest.v2.json');
+        const manifestPath = join(teamDirPath, 'manifest.json');
         const configPath = join(teamDirPath, 'config.json');
         const requestsPath = join(teamDirPath, 'dispatch', 'requests.json');
         if (!existsSync(requestsPath))

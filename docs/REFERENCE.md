@@ -358,11 +358,12 @@ omc ask claude --agent-prompt executor --prompt "create an implementation plan"
 ```bash
 omc team 2:codex "review auth flow"
 omc team status review-auth-flow
+omc team resume review-auth-flow
 omc team shutdown review-auth-flow --force
 omc team api claim-task --input '{"team_name":"auth-review","task_id":"1","worker":"worker-1"}' --json
 ```
 
-Supported entrypoints: direct start (`omc team [N:agent] "<task>"`), `status`, `shutdown`, and `api`.
+Supported entrypoints: direct start (`omc team [N:agent] "<task>"`), `status`, `wait`, `cleanup`, `resume`, `shutdown`, and `api`.
 
 Topology behavior:
 - inside classic tmux (`$TMUX` set): reuse the current tmux surface for split-pane or `--new-window` layouts
@@ -472,7 +473,7 @@ Includes **34 canonical skills + 1 deprecated alias** (`psm`). Runtime truth com
 | `omc-plan`                | Planning workflow (`/plan` safe alias)                           | `/oh-my-claudecode:omc-plan`                |
 | `omc-reference`           | Detailed OMC agent/tools/team/commit reference skill             | Auto-loaded reference only                  |
 | `omc-setup`               | One-time setup wizard                                            | `/oh-my-claudecode:omc-setup`               |
-| `omc-teams`               | Spawn `claude`/`codex`/`gemini` tmux workers for parallel execution | `/oh-my-claudecode:omc-teams`             |
+| `omc-teams`               | Shortcut to launch `omc team ...` tmux CLI workers (`claude`/`codex`/`gemini`) | `/oh-my-claudecode:omc-teams`             |
 | `project-session-manager` | Manage isolated dev environments (git worktrees + tmux)          | `/oh-my-claudecode:project-session-manager` |
 | `psm` | **Deprecated** compatibility alias for `project-session-manager` | `/oh-my-claudecode:psm` |
 | `ralph`                   | Persistence loop until verified completion                       | `/oh-my-claudecode:ralph`                   |
@@ -510,7 +511,7 @@ Each installed skill is exposed as `/oh-my-claudecode:<skill-name>`. The skills 
 | `/oh-my-claudecode:omc-doctor`                  | Diagnose and fix installation issues                                                       |
 | `/oh-my-claudecode:omc-plan <description>`      | Start planning session (supports consensus structured deliberation)                        |
 | `/oh-my-claudecode:omc-setup`                   | One-time setup wizard                                                                      |
-| `/oh-my-claudecode:omc-teams <N>:<agent> <task>`       | Spawn `claude`/`codex`/`gemini` tmux workers for legacy parallel execution                |
+| `/oh-my-claudecode:omc-teams <N>:<agent> <task>`       | Shortcut to `omc team ...` for `claude`/`codex`/`gemini` tmux worker execution            |
 | `/oh-my-claudecode:project-session-manager <arguments>` | Manage isolated dev environments with git worktrees + tmux                         |
 | `/oh-my-claudecode:psm <arguments>`             | Deprecated alias for project session manager                                               |
 | `/oh-my-claudecode:ralph <task>`                | Self-referential loop until task completion (`--critic=architect|critic|codex`)           |

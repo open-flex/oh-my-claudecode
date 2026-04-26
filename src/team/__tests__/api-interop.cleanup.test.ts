@@ -3,18 +3,9 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-const { shutdownTeamV2Mock, shutdownTeamMock } = vi.hoisted(() => ({
-  shutdownTeamV2Mock: vi.fn(async () => {}),
+const { shutdownTeamMock } = vi.hoisted(() => ({
   shutdownTeamMock: vi.fn(async () => {}),
 }));
-
-vi.mock('../runtime-v2.js', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../runtime-v2.js')>();
-  return {
-    ...actual,
-    shutdownTeamV2: shutdownTeamV2Mock,
-  };
-});
 
 vi.mock('../runtime.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../runtime.js')>();
@@ -36,7 +27,6 @@ describe('team api cleanup', () => {
   let cwd = '';
 
   afterEach(async () => {
-    shutdownTeamV2Mock.mockClear();
     shutdownTeamMock.mockClear();
     if (cwd) {
       await rm(cwd, { recursive: true, force: true });
@@ -44,7 +34,7 @@ describe('team api cleanup', () => {
     }
   });
 
-  it('routes cleanup through runtime-v2 shutdown when a v2 team config exists', async () => {
+  it('routes cleanup through runtime shutdown when a team config exists', async () => {
     cwd = await mkdtemp(join(tmpdir(), 'omc-api-cleanup-v2-'));
     const teamName = 'cleanup-v2';
     await writeJson(cwd, `.omc/state/team/${teamName}/config.json`, {
@@ -74,8 +64,7 @@ describe('team api cleanup', () => {
     const result = await executeTeamApiOperation('cleanup', { team_name: teamName }, cwd);
 
     expect(result).toEqual({ ok: true, operation: 'cleanup', data: { team_name: teamName } });
-    expect(shutdownTeamV2Mock).toHaveBeenCalledWith(teamName, cwd);
-    expect(shutdownTeamMock).not.toHaveBeenCalled();
+    expect(shutdownTeamMock).toHaveBeenCalledWith(teamName, cwd);
   });
 
   it('surfaces shutdown gate failures instead of deleting team state directly', async () => {
@@ -114,7 +103,7 @@ describe('team api cleanup', () => {
       created_at: new Date().toISOString(),
     });
 
-    shutdownTeamV2Mock.mockImplementationOnce(async () => {
+    shutdownTeamMock.mockImplementationOnce(async () => {
       throw new Error('shutdown_gate_blocked:pending=1,blocked=0,in_progress=0,failed=0');
     });
 
@@ -125,7 +114,7 @@ describe('team api cleanup', () => {
     expect(result.error.code).toBe('operation_failed');
     expect(result.error.message).toContain('shutdown_gate_blocked');
     await expect(readFile(join(teamRoot, 'config.json'), 'utf-8')).resolves.toContain(teamName);
-    expect(shutdownTeamV2Mock).toHaveBeenCalledWith(teamName, cwd);
+    expect(shutdownTeamMock).toHaveBeenCalledWith(teamName, cwd);
   });
 
   it('falls back to raw cleanup when no config exists', async () => {
@@ -139,7 +128,7 @@ describe('team api cleanup', () => {
 
     expect(result).toEqual({ ok: true, operation: 'cleanup', data: { team_name: teamName } });
     await expect(readFile(join(teamRoot, 'orphan.txt'), 'utf-8')).rejects.toMatchObject({ code: 'ENOENT' });
-    expect(shutdownTeamV2Mock).not.toHaveBeenCalled();
+    expect(shutdownTeamMock).not.toHaveBeenCalled();
     expect(shutdownTeamMock).not.toHaveBeenCalled();
   });
 });

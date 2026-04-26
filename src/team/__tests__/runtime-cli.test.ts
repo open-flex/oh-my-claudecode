@@ -221,7 +221,7 @@ describe('runtime-cli terminal preservation helper', () => {
       const tasksDir = join(stateRoot, 'tasks');
       mkdirSync(tasksDir, { recursive: true });
       writeFileSync(
-        join(tasksDir, '1.json'),
+        join(tasksDir, 'task-1.json'),
         JSON.stringify({
           id: '1',
           status: 'completed',
@@ -258,7 +258,7 @@ describe('runtime-cli terminal preservation helper', () => {
       const tasksDir = join(stateRoot, 'tasks');
       mkdirSync(tasksDir, { recursive: true });
       writeFileSync(
-        join(tasksDir, '1.json'),
+        join(tasksDir, 'task-1.json'),
         JSON.stringify({
           id: '1',
           status: 'blocked',

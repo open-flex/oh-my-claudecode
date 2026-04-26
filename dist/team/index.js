@@ -35,7 +35,7 @@ export { sendTmuxTrigger, queueInboxInstruction, queueDirectMessage, queueBroadc
 // Deprecated backward-compat exports for older layout APIs.
 export { LayoutStabilizer } from './layout-stabilizer.js';
 export { inferPhase, getPhaseTransitionLog, isTerminalPhase } from './phase-controller.js';
-export { startTeam, monitorTeam, assignTask, shutdownTeam, resumeTeam, watchdogCliWorkers } from './runtime.js';
+export { startTeam, monitorTeam, shutdownTeam, resumeTeam, findActiveTeams } from './runtime.js';
 export { injectToLeaderPane } from './tmux-session.js';
 // api-interop (CLI API for workers)
 export { TEAM_API_OPERATIONS, LEGACY_TEAM_MCP_TOOLS, resolveTeamApiOperation, executeTeamApiOperation, buildLegacyTeamDeprecationHint, } from './api-interop.js';

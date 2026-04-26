@@ -195,7 +195,7 @@ function getTeamWorkerIdentityFromEnv(env = process.env) {
 export async function assertTeamSpawnAllowed(cwd, env = process.env) {
     const workerIdentity = getTeamWorkerIdentityFromEnv(env);
     const { teamReadManifest } = await import('../../team/team-ops.js');
-    const { findActiveTeamsV2 } = await import('../../team/runtime-v2.js');
+    const { findActiveTeams } = await import('../../team/runtime.js');
     const { DEFAULT_TEAM_GOVERNANCE, normalizeTeamGovernance } = await import('../../team/governance.js');
     if (workerIdentity) {
         const [parentTeamName] = workerIdentity.split('/');
@@ -209,7 +209,7 @@ export async function assertTeamSpawnAllowed(cwd, env = process.env) {
         }
         return;
     }
-    const activeTeams = await findActiveTeamsV2(cwd);
+    const activeTeams = await findActiveTeams(cwd);
     for (const activeTeam of activeTeams) {
         const manifest = await teamReadManifest(activeTeam, cwd);
         const governance = normalizeTeamGovernance(manifest?.governance, manifest?.policy);
@@ -493,43 +493,6 @@ async function handleTeamStart(parsed, cwd) {
         const { loadAgentPrompt } = await import('../../agents/utils.js');
         rolePrompt = loadAgentPrompt(parsed.role);
     }
-    // Use v2 runtime by default (OMC_RUNTIME_V2 opt-out), otherwise fall back to v1
-    const { isRuntimeV2Enabled } = await import('../../team/runtime-v2.js');
-    if (isRuntimeV2Enabled()) {
-        const { startTeamV2, monitorTeamV2 } = await import('../../team/runtime-v2.js');
-        const runtime = await startTeamV2({
-            teamName: parsed.teamName,
-            workerCount: effectiveWorkerCount,
-            agentTypes: parsed.agentTypes.slice(0, effectiveWorkerCount),
-            tasks,
-            cwd,
-            newWindow: parsed.newWindow,
-            workerRoles: parsed.workerSpecs.map((spec) => spec.role ?? spec.agentType),
-            ...(rolePrompt ? { roleName: parsed.role, rolePrompt } : {}),
-        });
-        const uniqueTypes = [...new Set(parsed.agentTypes)].join(',');
-        if (parsed.json) {
-            const snapshot = await monitorTeamV2(runtime.teamName, cwd);
-            console.log(JSON.stringify({
-                teamName: runtime.teamName,
-                sessionName: runtime.sessionName,
-                workerCount: runtime.config.worker_count,
-                agentType: uniqueTypes,
-                tasks: snapshot ? snapshot.tasks : null,
-            }));
-            return;
-        }
-        console.log(`Team started: ${runtime.teamName}`);
-        console.log(`tmux session: ${runtime.sessionName}`);
-        console.log(`workers: ${runtime.config.worker_count}`);
-        console.log(`agent_type: ${uniqueTypes}`);
-        const snapshot = await monitorTeamV2(runtime.teamName, cwd);
-        if (snapshot) {
-            console.log(`tasks: total=${snapshot.tasks.total} pending=${snapshot.tasks.pending} in_progress=${snapshot.tasks.in_progress} completed=${snapshot.tasks.completed} failed=${snapshot.tasks.failed}`);
-        }
-        return;
-    }
-    // v1 fallback
     const { startTeam, monitorTeam } = await import('../../team/runtime.js');
     const runtime = await startTeam({
         teamName: parsed.teamName,
@@ -538,98 +501,73 @@ async function handleTeamStart(parsed, cwd) {
         tasks,
         cwd,
         newWindow: parsed.newWindow,
+        workerRoles: parsed.workerSpecs.map((spec) => spec.role ?? spec.agentType),
+        ...(rolePrompt ? { roleName: parsed.role, rolePrompt } : {}),
     });
-    const uniqueTypesV1 = [...new Set(parsed.agentTypes)].join(',');
+    const uniqueTypes = [...new Set(parsed.agentTypes)].join(',');
     if (parsed.json) {
-        const snapshot = await monitorTeam(runtime.teamName, cwd, runtime.workerPaneIds);
+        const snapshot = await monitorTeam(runtime.teamName, cwd);
         console.log(JSON.stringify({
             teamName: runtime.teamName,
             sessionName: runtime.sessionName,
-            workerCount: runtime.workerNames.length,
-            agentType: uniqueTypesV1,
-            tasks: snapshot ? {
-                total: snapshot.taskCounts.pending + snapshot.taskCounts.inProgress + snapshot.taskCounts.completed + snapshot.taskCounts.failed,
-                pending: snapshot.taskCounts.pending,
-                in_progress: snapshot.taskCounts.inProgress,
-                completed: snapshot.taskCounts.completed,
-                failed: snapshot.taskCounts.failed,
-            } : null,
+            workerCount: runtime.config.worker_count,
+            agentType: uniqueTypes,
+            tasks: snapshot ? snapshot.tasks : null,
         }));
         return;
     }
     console.log(`Team started: ${runtime.teamName}`);
     console.log(`tmux session: ${runtime.sessionName}`);
-    console.log(`workers: ${runtime.workerNames.length}`);
-    console.log(`agent_type: ${uniqueTypesV1}`);
-    const snapshot = await monitorTeam(runtime.teamName, cwd, runtime.workerPaneIds);
+    console.log(`workers: ${runtime.config.worker_count}`);
+    console.log(`agent_type: ${uniqueTypes}`);
+    const snapshot = await monitorTeam(runtime.teamName, cwd);
     if (snapshot) {
-        console.log(`tasks: total=${snapshot.taskCounts.pending + snapshot.taskCounts.inProgress + snapshot.taskCounts.completed + snapshot.taskCounts.failed} pending=${snapshot.taskCounts.pending} in_progress=${snapshot.taskCounts.inProgress} completed=${snapshot.taskCounts.completed} failed=${snapshot.taskCounts.failed}`);
+        console.log(`tasks: total=${snapshot.tasks.total} pending=${snapshot.tasks.pending} in_progress=${snapshot.tasks.in_progress} completed=${snapshot.tasks.completed} failed=${snapshot.tasks.failed}`);
     }
 }
 // ---------------------------------------------------------------------------
 // Team status
 // ---------------------------------------------------------------------------
 async function handleTeamStatus(teamName, cwd) {
-    const { isRuntimeV2Enabled } = await import('../../team/runtime-v2.js');
-    if (isRuntimeV2Enabled()) {
-        const { monitorTeamV2 } = await import('../../team/runtime-v2.js');
-        const { deriveTeamLeaderGuidance } = await import('../../team/leader-nudge-guidance.js');
-        const { readTeamEventsByType } = await import('../../team/events.js');
-        const snapshot = await monitorTeamV2(teamName, cwd);
-        if (!snapshot) {
-            console.log(`No team state found for ${teamName}`);
-            return;
-        }
-        const leaderGuidance = deriveTeamLeaderGuidance({
-            tasks: {
-                pending: snapshot.tasks.pending,
-                blocked: snapshot.tasks.blocked,
-                inProgress: snapshot.tasks.in_progress,
-                completed: snapshot.tasks.completed,
-                failed: snapshot.tasks.failed,
-            },
-            workers: {
-                total: snapshot.workers.length,
-                alive: snapshot.workers.filter((worker) => worker.alive).length,
-                idle: snapshot.workers.filter((worker) => worker.alive && (worker.status.state === 'idle' || worker.status.state === 'done')).length,
-                nonReporting: snapshot.nonReportingWorkers.length,
-            },
-        });
-        const latestLeaderNudge = (await readTeamEventsByType(teamName, 'team_leader_nudge', cwd)).at(-1);
-        console.log(`team=${snapshot.teamName} phase=${snapshot.phase}`);
-        console.log(`workers: total=${snapshot.workers.length}`);
-        console.log(`tasks: total=${snapshot.tasks.total} pending=${snapshot.tasks.pending} blocked=${snapshot.tasks.blocked} in_progress=${snapshot.tasks.in_progress} completed=${snapshot.tasks.completed} failed=${snapshot.tasks.failed}`);
-        console.log(`leader_next_action=${leaderGuidance.nextAction}`);
-        console.log(`leader_guidance=${leaderGuidance.message}`);
-        if (latestLeaderNudge) {
-            console.log(`latest_leader_nudge action=${latestLeaderNudge.next_action ?? 'unknown'} at=${latestLeaderNudge.created_at} reason=${latestLeaderNudge.reason ?? 'n/a'}`);
-        }
-        return;
-    }
-    // v1 fallback
     const { monitorTeam } = await import('../../team/runtime.js');
-    const snapshot = await monitorTeam(teamName, cwd, []);
+    const { deriveTeamLeaderGuidance } = await import('../../team/leader-nudge-guidance.js');
+    const { readTeamEventsByType } = await import('../../team/events.js');
+    const snapshot = await monitorTeam(teamName, cwd);
     if (!snapshot) {
         console.log(`No team state found for ${teamName}`);
         return;
     }
+    const leaderGuidance = deriveTeamLeaderGuidance({
+        tasks: {
+            pending: snapshot.tasks.pending,
+            blocked: snapshot.tasks.blocked,
+            inProgress: snapshot.tasks.in_progress,
+            completed: snapshot.tasks.completed,
+            failed: snapshot.tasks.failed,
+        },
+        workers: {
+            total: snapshot.workers.length,
+            alive: snapshot.workers.filter((worker) => worker.alive).length,
+            idle: snapshot.workers.filter((worker) => worker.alive && (worker.status.state === 'idle' || worker.status.state === 'done')).length,
+            nonReporting: snapshot.nonReportingWorkers.length,
+        },
+    });
+    const latestLeaderNudge = (await readTeamEventsByType(teamName, 'team_leader_nudge', cwd)).at(-1);
     console.log(`team=${snapshot.teamName} phase=${snapshot.phase}`);
-    console.log(`tasks: pending=${snapshot.taskCounts.pending} in_progress=${snapshot.taskCounts.inProgress} completed=${snapshot.taskCounts.completed} failed=${snapshot.taskCounts.failed}`);
+    console.log(`workers: total=${snapshot.workers.length}`);
+    console.log(`tasks: total=${snapshot.tasks.total} pending=${snapshot.tasks.pending} blocked=${snapshot.tasks.blocked} in_progress=${snapshot.tasks.in_progress} completed=${snapshot.tasks.completed} failed=${snapshot.tasks.failed}`);
+    console.log(`leader_next_action=${leaderGuidance.nextAction}`);
+    console.log(`leader_guidance=${leaderGuidance.message}`);
+    if (latestLeaderNudge) {
+        console.log(`latest_leader_nudge action=${latestLeaderNudge.next_action ?? 'unknown'} at=${latestLeaderNudge.created_at} reason=${latestLeaderNudge.reason ?? 'n/a'}`);
+    }
 }
 // ---------------------------------------------------------------------------
 // Team shutdown
 // ---------------------------------------------------------------------------
 async function handleTeamShutdown(teamName, cwd, force) {
-    const { isRuntimeV2Enabled } = await import('../../team/runtime-v2.js');
-    if (isRuntimeV2Enabled()) {
-        const { shutdownTeamV2 } = await import('../../team/runtime-v2.js');
-        await shutdownTeamV2(teamName, cwd, { force });
-        console.log(`Team shutdown complete: ${teamName}`);
-        return;
-    }
-    // v1 fallback
     const { shutdownTeam } = await import('../../team/runtime.js');
-    await shutdownTeam(teamName, `omc-team-${teamName}`, cwd);
+    await shutdownTeam(teamName, cwd, { force });
     console.log(`Team shutdown complete: ${teamName}`);
 }
 // ---------------------------------------------------------------------------

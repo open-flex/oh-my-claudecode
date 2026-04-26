@@ -335,7 +335,7 @@ describe("parseTmuxTail noise filters", () => {
         const input = [
             "worker_notify_failed while dispatching startup inbox",
             "Task failed after retry budget exhausted",
-            "Resolve the merge conflict in src/team/runtime-v2.ts before rerunning tests",
+            "Resolve the merge conflict in src/team/runtime.ts before rerunning tests",
         ].join("\n");
         expect(parseTmuxTail(input)).toBe(input);
     });

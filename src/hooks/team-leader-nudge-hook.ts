@@ -138,7 +138,7 @@ export async function checkLeaderStaleness(params: {
 
   // Read config to get worker list
   const configPath = join(teamDir, 'config.json');
-  const manifestPath = join(teamDir, 'manifest.v2.json');
+  const manifestPath = join(teamDir, 'manifest.json');
   const srcPath = existsSync(manifestPath) ? manifestPath : existsSync(configPath) ? configPath : null;
   if (!srcPath) return { ...notStale, reason: 'no_config' };
 
@@ -330,7 +330,7 @@ export async function maybeNudgeLeader(params: {
 
   // Find leader pane
   const configPath = join(teamDir, 'config.json');
-  const manifestPath = join(teamDir, 'manifest.v2.json');
+  const manifestPath = join(teamDir, 'manifest.json');
   const srcPath = existsSync(manifestPath) ? manifestPath : existsSync(configPath) ? configPath : null;
   if (!srcPath) return { nudged: false, reason: 'no_config' };
 

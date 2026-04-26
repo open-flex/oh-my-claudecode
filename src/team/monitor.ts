@@ -5,7 +5,7 @@
  * against previous snapshot, emits events, delivers mailbox messages,
  * and persists the new snapshot for the next cycle.
  *
- * NO polling watchdog. The caller (runtime-v2 or runtime-cli) drives
+ * NO polling watchdog. The caller (runtime or runtime-cli) drives
  * the monitor loop.
  */
 
@@ -16,7 +16,7 @@ import { performance } from 'perf_hooks';
 import { TeamPaths, absPath } from './state-paths.js';
 import type {
   TeamConfig,
-  TeamManifestV2,
+  TeamManifest,
   TeamMonitorSnapshotState,
   TeamPhaseState,
   WorkerStatus,
@@ -57,7 +57,7 @@ async function writeAtomic(filePath: string, data: string): Promise<void> {
 // Config / Manifest readers
 // ---------------------------------------------------------------------------
 
-function configFromManifest(manifest: TeamManifestV2): TeamConfig {
+function configFromManifest(manifest: TeamManifest): TeamConfig {
   return {
     name: manifest.name,
     task: manifest.task,
@@ -100,8 +100,8 @@ export async function readTeamConfig(teamName: string, cwd: string): Promise<Tea
   });
 }
 
-export async function readTeamManifest(teamName: string, cwd: string): Promise<TeamManifestV2 | null> {
-  const manifest = await readJsonSafe<TeamManifestV2>(absPath(cwd, TeamPaths.manifest(teamName)));
+export async function readTeamManifest(teamName: string, cwd: string): Promise<TeamManifest | null> {
+  const manifest = await readJsonSafe<TeamManifest>(absPath(cwd, TeamPaths.manifest(teamName)));
   return manifest ? normalizeTeamManifest(manifest) : null;
 }
 
@@ -279,7 +279,7 @@ export async function listTasksFromFiles(
   const entries = await readdir(tasksDir);
   const tasks: TeamTask[] = [];
   for (const entry of entries) {
-    const match = /^(?:task-)?(\d+)\.json$/.exec(entry);
+    const match = /^task-(\d+)\.json$/.exec(entry);
     if (!match) continue;
     const task = await readJsonSafe<TeamTask>(absPath(cwd, `${TeamPaths.tasks(teamName)}/${entry}`));
     if (task) tasks.push(task);
@@ -377,7 +377,7 @@ export async function getTeamSummary(
 export async function saveTeamConfig(config: TeamConfig, cwd: string): Promise<void> {
   await writeAtomic(absPath(cwd, TeamPaths.config(config.name)), JSON.stringify(config, null, 2));
   const manifestPath = absPath(cwd, TeamPaths.manifest(config.name));
-  const existingManifest = await readJsonSafe<TeamManifestV2>(manifestPath);
+  const existingManifest = await readJsonSafe<TeamManifest>(manifestPath);
   if (existingManifest) {
     const nextManifest = normalizeTeamManifest({
       ...existingManifest,

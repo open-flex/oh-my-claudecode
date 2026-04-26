@@ -54,7 +54,7 @@ vi.mock('../mcp-comm.js', () => ({
   queueInboxInstruction: mocks.queueInboxInstruction,
 }));
 
-describe('runtime-v2 Gemini preflight routing', () => {
+describe('runtime Gemini preflight routing', () => {
   let cwd = '';
 
   beforeEach(() => {
@@ -83,9 +83,9 @@ describe('runtime-v2 Gemini preflight routing', () => {
 
   it('keeps an explicitly routed gemini lane on gemini when strict preflight path probing false-negatives', async () => {
     cwd = await mkdtemp(join(tmpdir(), 'issue2675-repro-'));
-    const { startTeamV2 } = await import('../runtime-v2.js');
+    const { startTeam } = await import('../runtime.js');
 
-    const runtime = await startTeamV2({
+    const runtime = await startTeam({
       teamName: 'issue2675-team',
       workerCount: 1,
       agentTypes: ['gemini'],

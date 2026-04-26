@@ -20,7 +20,7 @@ const TASKS_DIR = join(WORK_DIR, '.omc', 'state', 'team', TEST_TEAM, 'tasks');
 
 function writeTask(task: TaskFile): void {
   mkdirSync(TASKS_DIR, { recursive: true });
-  writeFileSync(join(TASKS_DIR, `${task.id}.json`), JSON.stringify(task, null, 2));
+  writeFileSync(join(TASKS_DIR, `task-${task.id}.json`), JSON.stringify(task, null, 2));
 }
 
 function readOutbox(): OutboxMessage[] {

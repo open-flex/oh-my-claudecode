@@ -37,7 +37,7 @@ Use CLI commands instead:
 ### How to Migrate
 
 1. Replace MCP runtime tool calls with CLI equivalents.
-2. Update skills/prompts from `/omc-teams ...` to `omc team ...` syntax.
+2. Prefer `omc team ...` CLI commands in scripts and docs; `/omc-teams` remains a shortcut that routes to the same CLI surface.
 3. Remove any manual `team-mcp.cjs` MCP server registrations from local settings.
 
 ### Example mapping

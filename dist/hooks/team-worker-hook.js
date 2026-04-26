@@ -167,7 +167,7 @@ async function readWorkerHeartbeatSnapshot(stateDir, teamName, workerName, nowMs
     }
 }
 async function readTeamWorkersForIdleCheck(stateDir, teamName) {
-    const manifestPath = join(stateDir, 'team', teamName, 'manifest.v2.json');
+    const manifestPath = join(stateDir, 'team', teamName, 'manifest.json');
     const configPath = join(stateDir, 'team', teamName, 'config.json');
     const srcPath = existsSync(manifestPath) ? manifestPath : existsSync(configPath) ? configPath : null;
     if (!srcPath)

@@ -25,11 +25,11 @@ async function writeJson(cwd: string, relativePath: string, value: unknown): Pro
   await writeFile(fullPath, JSON.stringify(value, null, 2), 'utf-8');
 }
 
-describe('shutdownTeamV2 split-pane pane cleanup', () => {
+describe('shutdownTeam split-pane pane cleanup', () => {
   let cwd = '';
 
   beforeEach(async () => {
-    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-v2-pane-cleanup-'));
+    cwd = await mkdtemp(join(tmpdir(), 'omc-runtime-pane-cleanup-'));
     tmuxCalls.length = 0;
     execFileMock.mockReset();
     execMock.mockReset();
@@ -108,8 +108,8 @@ describe('shutdownTeamV2 split-pane pane cleanup', () => {
       resize_hook_target: null,
     });
 
-    const { shutdownTeamV2 } = await import('../runtime-v2.js');
-    await shutdownTeamV2(teamName, cwd, { timeoutMs: 0 });
+    const { shutdownTeam } = await import('../runtime.js');
+    await shutdownTeam(teamName, cwd, { timeoutMs: 0 });
 
     const killPaneTargets = tmuxCalls
       .filter((args) => args[0] === 'kill-pane')

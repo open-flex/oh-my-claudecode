@@ -9,9 +9,7 @@ const mocks = vi.hoisted(() => ({
     resumeTeam: vi.fn(),
     monitorTeam: vi.fn(),
     shutdownTeam: vi.fn(),
-    isRuntimeV2Enabled: vi.fn(() => false),
-    monitorTeamV2: vi.fn(),
-    shutdownTeamV2: vi.fn(),
+    readTeamConfig: vi.fn(),
 }));
 vi.mock('child_process', async (importOriginal) => {
     const actual = await importOriginal();
@@ -28,15 +26,6 @@ vi.mock('../../team/tmux-session.js', async (importOriginal) => {
         killTeamSession: mocks.killTeamSession,
     };
 });
-vi.mock('../../team/runtime-v2.js', async (importOriginal) => {
-    const actual = await importOriginal();
-    return {
-        ...actual,
-        isRuntimeV2Enabled: mocks.isRuntimeV2Enabled,
-        monitorTeamV2: mocks.monitorTeamV2,
-        shutdownTeamV2: mocks.shutdownTeamV2,
-    };
-});
 vi.mock('../../team/runtime.js', async (importOriginal) => {
     const actual = await importOriginal();
     return {
@@ -44,6 +33,13 @@ vi.mock('../../team/runtime.js', async (importOriginal) => {
         resumeTeam: mocks.resumeTeam,
         monitorTeam: mocks.monitorTeam,
         shutdownTeam: mocks.shutdownTeam,
+    };
+});
+vi.mock('../../team/monitor.js', async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+        ...actual,
+        readTeamConfig: mocks.readTeamConfig,
     };
 });
 describe('team cli', () => {
@@ -58,10 +54,7 @@ describe('team cli', () => {
         mocks.resumeTeam.mockReset();
         mocks.monitorTeam.mockReset();
         mocks.shutdownTeam.mockReset();
-        mocks.isRuntimeV2Enabled.mockReset();
-        mocks.isRuntimeV2Enabled.mockReturnValue(false);
-        mocks.monitorTeamV2.mockReset();
-        mocks.shutdownTeamV2.mockReset();
+        mocks.readTeamConfig.mockReset();
     });
     afterEach(() => {
         delete process.env.OMC_JOBS_DIR;
@@ -275,11 +268,10 @@ describe('team cli', () => {
         expect(mocks.killTeamSession).toHaveBeenCalledWith('leader-session:3', ['%11', '%12'], '%10', { sessionMode: 'dedicated-window' });
         rmSync(cwd, { recursive: true, force: true });
     });
-    it('team status uses runtime-v2 snapshot when enabled', async () => {
+    it('team status uses runtime snapshot', async () => {
         const { teamCommand } = await import('../team.js');
         const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
-        mocks.isRuntimeV2Enabled.mockReturnValue(true);
-        mocks.monitorTeamV2.mockResolvedValue({
+        mocks.monitorTeam.mockResolvedValue({
             teamName: 'demo-team',
             phase: 'team-exec',
             workers: [],
@@ -292,26 +284,14 @@ describe('team cli', () => {
             performance: { total_ms: 1, list_tasks_ms: 1, worker_scan_ms: 0, mailbox_delivery_ms: 0, updated_at: new Date().toISOString() },
             monitorPerformance: { listTasksMs: 0, workerScanMs: 0, totalMs: 0 },
         });
-        const cwd = mkdtempSync(join(tmpdir(), 'omc-team-cli-v2-status-'));
-        const root = join(cwd, '.omc', 'state', 'team', 'demo-team');
-        mkdirSync(root, { recursive: true });
-        writeFileSync(join(root, 'config.json'), JSON.stringify({
-            name: 'demo-team',
-            task: 'demo',
-            agent_type: 'executor',
-            worker_count: 1,
-            max_workers: 20,
+        mocks.readTeamConfig.mockResolvedValue({
             tmux_session: 'demo-session:0',
-            workers: [{ name: 'worker-1', index: 1, role: 'executor', assigned_tasks: [], pane_id: '%1' }],
-            created_at: new Date().toISOString(),
-            next_task_id: 2,
             leader_pane_id: '%0',
-            hud_pane_id: null,
-            resize_hook_name: null,
-            resize_hook_target: null,
-        }));
+            workers: [{ name: 'worker-1', pane_id: '%1' }],
+        });
+        const cwd = mkdtempSync(join(tmpdir(), 'omc-team-cli-v2-status-'));
         await teamCommand(['status', 'demo-team', '--json', '--cwd', cwd]);
-        expect(mocks.monitorTeamV2).toHaveBeenCalledWith('demo-team', cwd);
+        expect(mocks.monitorTeam).toHaveBeenCalledWith('demo-team', cwd);
         expect(mocks.resumeTeam).not.toHaveBeenCalled();
         const payload = JSON.parse(logSpy.mock.calls[0][0]);
         expect(payload.running).toBe(true);
@@ -323,8 +303,7 @@ describe('team cli', () => {
     it('team status deduplicates workerPaneIds from duplicate worker config rows', async () => {
         const { teamCommand } = await import('../team.js');
         const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
-        mocks.isRuntimeV2Enabled.mockReturnValue(true);
-        mocks.monitorTeamV2.mockResolvedValue({
+        mocks.monitorTeam.mockResolvedValue({
             teamName: 'demo-team',
             phase: 'team-exec',
             workers: [],
@@ -335,60 +314,49 @@ describe('team cli', () => {
             allTasksTerminal: false,
             performance: { total_ms: 1, list_tasks_ms: 1, worker_scan_ms: 0, mailbox_delivery_ms: 0, updated_at: new Date().toISOString() },
         });
-        const cwd = mkdtempSync(join(tmpdir(), 'omc-team-cli-v2-status-dedup-'));
-        const root = join(cwd, '.omc', 'state', 'team', 'demo-team');
-        mkdirSync(root, { recursive: true });
-        writeFileSync(join(root, 'config.json'), JSON.stringify({
-            name: 'demo-team',
-            task: 'demo',
-            agent_type: 'executor',
-            worker_count: 2,
-            max_workers: 20,
+        mocks.readTeamConfig.mockResolvedValue({
             tmux_session: 'demo-session:0',
-            workers: [
-                { name: 'worker-1', index: 1, role: 'executor', assigned_tasks: [], pane_id: '%1' },
-                { name: 'worker-1', index: 0, role: 'executor', assigned_tasks: [] },
-            ],
-            created_at: new Date().toISOString(),
-            next_task_id: 2,
             leader_pane_id: '%0',
-            hud_pane_id: null,
-            resize_hook_name: null,
-            resize_hook_target: null,
-        }));
+            workers: [
+                { name: 'worker-1', pane_id: '%1' },
+                { name: 'worker-1' },
+            ],
+        });
+        const cwd = mkdtempSync(join(tmpdir(), 'omc-team-cli-v2-status-dedup-'));
         await teamCommand(['status', 'demo-team', '--json', '--cwd', cwd]);
         const payload = JSON.parse(logSpy.mock.calls[0][0]);
         expect(payload.workerPaneIds).toEqual(['%1']);
         rmSync(cwd, { recursive: true, force: true });
         logSpy.mockRestore();
     });
-    it('team status supports team-name target via runtime snapshot', async () => {
+    it('team status returns snapshot and team metadata for team-name target', async () => {
         const { teamCommand } = await import('../team.js');
         const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
-        mocks.resumeTeam.mockResolvedValue({
-            teamName: 'demo-team',
-            sessionName: 'omc-team-demo:0',
-            leaderPaneId: '%0',
-            config: { teamName: 'demo-team', workerCount: 1, agentTypes: ['codex'], tasks: [], cwd: '/tmp/demo' },
-            workerNames: ['worker-1'],
-            workerPaneIds: ['%1'],
-            activeWorkers: new Map(),
-            cwd: '/tmp/demo',
+        mocks.readTeamConfig.mockResolvedValue({
+            tmux_session: 'demo-session:0',
+            workers: [{ name: 'worker-1', pane_id: '%1' }],
+            leader_pane_id: '%0',
         });
         mocks.monitorTeam.mockResolvedValue({
             teamName: 'demo-team',
-            phase: 'executing',
+            phase: 'team-exec',
             workers: [],
-            taskCounts: { pending: 0, inProgress: 1, completed: 0, failed: 0 },
+            tasks: { total: 1, pending: 0, blocked: 0, in_progress: 1, completed: 0, failed: 0, items: [] },
             deadWorkers: [],
-            monitorPerformance: { listTasksMs: 0, workerScanMs: 0, totalMs: 0 },
+            nonReportingWorkers: [],
+            recommendations: [],
+            allTasksTerminal: false,
+            performance: { total_ms: 1, list_tasks_ms: 1, worker_scan_ms: 0, updated_at: new Date().toISOString() },
         });
         await teamCommand(['status', 'demo-team', '--json']);
-        expect(mocks.resumeTeam).toHaveBeenCalledWith('demo-team', process.cwd());
-        expect(mocks.monitorTeam).toHaveBeenCalled();
+        expect(mocks.monitorTeam).toHaveBeenCalledWith('demo-team', process.cwd());
+        expect(mocks.readTeamConfig).toHaveBeenCalledWith('demo-team', process.cwd());
         const payload = JSON.parse(logSpy.mock.calls[0][0]);
         expect(payload.running).toBe(true);
-        expect(payload.snapshot.phase).toBe('executing');
+        expect(payload.sessionName).toBe('demo-session:0');
+        expect(payload.leaderPaneId).toBe('%0');
+        expect(payload.workerPaneIds).toEqual(['%1']);
+        expect(payload.snapshot.phase).toBe('team-exec');
         logSpy.mockRestore();
     });
     it('team resume invokes runtime resumeTeam', async () => {
@@ -398,7 +366,18 @@ describe('team cli', () => {
             teamName: 'alpha-team',
             sessionName: 'omc-team-alpha:0',
             leaderPaneId: '%0',
-            config: { teamName: 'alpha-team', workerCount: 1, agentTypes: ['codex'], tasks: [], cwd: '/tmp/demo' },
+            config: {
+                name: 'alpha-team',
+                worker_count: 1,
+                max_workers: 20,
+                workers: [{ name: 'worker-1', index: 1, role: 'executor', assigned_tasks: [], pane_id: '%1' }],
+                created_at: new Date().toISOString(),
+                next_task_id: 2,
+                leader_pane_id: '%0',
+                hud_pane_id: null,
+                resize_hook_name: null,
+                resize_hook_target: null,
+            },
             workerNames: ['worker-1'],
             workerPaneIds: ['%1'],
             activeWorkers: new Map([['worker-1', { paneId: '%1', taskId: '1', spawnedAt: Date.now() }]]),
@@ -411,58 +390,24 @@ describe('team cli', () => {
         expect(payload.activeWorkers).toBe(1);
         logSpy.mockRestore();
     });
-    it('team shutdown uses runtime-v2 shutdown when enabled', async () => {
+    it('team shutdown uses runtime shutdown', async () => {
         const { teamCommand } = await import('../team.js');
         const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
-        mocks.isRuntimeV2Enabled.mockReturnValue(true);
-        mocks.shutdownTeamV2.mockResolvedValue(undefined);
-        const cwd = mkdtempSync(join(tmpdir(), 'omc-team-cli-v2-shutdown-'));
-        const root = join(cwd, '.omc', 'state', 'team', 'beta-team');
-        mkdirSync(root, { recursive: true });
-        writeFileSync(join(root, 'config.json'), JSON.stringify({
-            name: 'beta-team',
-            task: 'beta',
-            agent_type: 'executor',
-            worker_count: 1,
-            max_workers: 20,
+        mocks.shutdownTeam.mockResolvedValue(undefined);
+        mocks.readTeamConfig.mockResolvedValue({
             tmux_session: 'beta-session:0',
-            workers: [{ name: 'worker-1', index: 1, role: 'executor', assigned_tasks: [], pane_id: '%1' }],
-            created_at: new Date().toISOString(),
-            next_task_id: 2,
             leader_pane_id: '%0',
-            hud_pane_id: null,
-            resize_hook_name: null,
-            resize_hook_target: null,
-        }));
+            workers: [{ name: 'worker-1', pane_id: '%1' }],
+        });
+        const cwd = mkdtempSync(join(tmpdir(), 'omc-team-cli-v2-shutdown-'));
         await teamCommand(['shutdown', 'beta-team', '--force', '--json', '--cwd', cwd]);
-        expect(mocks.shutdownTeamV2).toHaveBeenCalledWith('beta-team', cwd, { force: true });
+        expect(mocks.shutdownTeam).toHaveBeenCalledWith('beta-team', cwd, { force: true, timeoutMs: 0 });
         expect(mocks.resumeTeam).not.toHaveBeenCalled();
-        expect(mocks.shutdownTeam).not.toHaveBeenCalled();
         const payload = JSON.parse(logSpy.mock.calls[0][0]);
         expect(payload.shutdown).toBe(true);
         expect(payload.forced).toBe(true);
         expect(payload.sessionFound).toBe(true);
         rmSync(cwd, { recursive: true, force: true });
-        logSpy.mockRestore();
-    });
-    it('team shutdown supports --force and calls runtime shutdown', async () => {
-        const { teamCommand } = await import('../team.js');
-        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
-        mocks.resumeTeam.mockResolvedValue({
-            teamName: 'beta-team',
-            sessionName: 'omc-team-beta:0',
-            leaderPaneId: '%0',
-            config: { teamName: 'beta-team', workerCount: 1, agentTypes: ['codex'], tasks: [], cwd: '/tmp/demo' },
-            workerNames: ['worker-1'],
-            workerPaneIds: ['%1'],
-            activeWorkers: new Map(),
-            cwd: '/tmp/demo',
-        });
-        await teamCommand(['shutdown', 'beta-team', '--force', '--json']);
-        expect(mocks.shutdownTeam).toHaveBeenCalledWith('beta-team', 'omc-team-beta:0', '/tmp/demo', 0, ['%1'], '%0', undefined);
-        const payload = JSON.parse(logSpy.mock.calls[0][0]);
-        expect(payload.shutdown).toBe(true);
-        expect(payload.forced).toBe(true);
         logSpy.mockRestore();
     });
     it('legacy shorthand start alias supports optional ralph token', async () => {
@@ -482,7 +427,7 @@ describe('team cli', () => {
         expect(payload.agentTypes).toEqual(['codex', 'codex']);
         expect(payload.tasks[0].subject).toContain('Ralph');
         expect(payload.tasks[0].description).toBe('ship feature');
-        const out = JSON.parse(logSpy.mock.calls[0][0]);
+        const out = JSON.parse(logSpy.mock.calls.at(-1)?.[0]);
         expect(out.status).toBe('running');
         expect(out.pid).toBe(5151);
         logSpy.mockRestore();
@@ -518,7 +463,7 @@ describe('team cli', () => {
             '--cwd',
             cwd,
         ]);
-        const payload = JSON.parse(logSpy.mock.calls[0][0]);
+        const payload = JSON.parse(logSpy.mock.calls.at(-1)?.[0]);
         expect(payload.ok).toBe(true);
         expect(payload.data.message.body).toBe('ACK');
         expect(payload.data.message.to_worker).toBe('leader-fixed');
@@ -568,7 +513,7 @@ describe('team cli', () => {
             '--cwd',
             cwd,
         ]);
-        const payload = JSON.parse(logSpy.mock.calls[0][0]);
+        const payload = JSON.parse(logSpy.mock.calls.at(-1)?.[0]);
         expect(payload.ok).toBe(true);
         expect(payload.data.notified).toBe(true);
         const mailbox = JSON.parse(readFileSync(join(root, 'mailbox', 'worker-1.json'), 'utf-8'));
@@ -587,6 +532,7 @@ describe('team cli', () => {
             subject: 'Legacy facade task',
             description: 'canonical task fixture',
             status: 'pending',
+            version: 1,
             created_at: new Date().toISOString(),
         }));
         writeFileSync(join(root, 'config.json'), JSON.stringify({
@@ -606,11 +552,11 @@ describe('team cli', () => {
             resize_hook_target: null,
         }));
         await teamCommand(['api', 'list-tasks', '--input', JSON.stringify({ teamName: 'api-team' }), '--json', '--cwd', cwd]);
-        const listPayload = JSON.parse(logSpy.mock.calls[0][0]);
+        const listPayload = JSON.parse(logSpy.mock.calls.at(-1)?.[0]);
         expect(listPayload.ok).toBe(true);
         expect(listPayload.data.tasks[0].id).toBe('1');
         await teamCommand(['api', 'read-config', '--input', JSON.stringify({ teamName: 'api-team' }), '--json', '--cwd', cwd]);
-        const configPayload = JSON.parse(logSpy.mock.calls[1][0]);
+        const configPayload = JSON.parse(logSpy.mock.calls.at(-1)?.[0]);
         expect(configPayload.ok).toBe(true);
         expect(configPayload.data.config.worker_count).toBe(1);
         rmSync(cwd, { recursive: true, force: true });
@@ -620,7 +566,7 @@ describe('team cli', () => {
         const { teamCommand } = await import('../team.js');
         const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
         await teamCommand(['api', 'unknown-op', '--json', '--input', JSON.stringify({ teamName: 'demo-team' })]);
-        const payload = JSON.parse(logSpy.mock.calls[0][0]);
+        const payload = JSON.parse(logSpy.mock.calls.at(-1)?.[0]);
         expect(payload.ok).toBe(false);
         expect(payload.error.code).toBe('UNSUPPORTED_OPERATION');
         logSpy.mockRestore();
